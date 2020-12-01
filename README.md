@@ -7,7 +7,7 @@ Construct a node dependency graph. Resolves dependencies, devDependencies and pe
 - Support circular dependencies.
 - Support circular peerDependencies.
 - Create duplicate versions of a package when there is a peerDependency conflict.
-- Ignore optional dependencies and peer-dependencies if they cannot be fulfilled.
+- Ignore optional dependencies and optional peer-dependencies if they cannot be fulfilled.
 
 ### Usage
 
