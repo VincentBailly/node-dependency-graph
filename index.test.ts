@@ -19,10 +19,7 @@ it("works", () => {
     {
       name: "C",
       version: "1.0.1",
-      isLocal: false,
-      peerDependencies: {
-        "B": "*"
-      }
+      isLocal: false
     }
   ];
 
@@ -39,8 +36,7 @@ it("works", () => {
     ],
     links: [
       { sourceId: 0, targetId: 1 },
-      { sourceId: 0, targetId: 2 },
-      { sourceId: 2, targetId: 1 }
+      { sourceId: 0, targetId: 2 }
     ]
   };
 

@@ -25,16 +25,18 @@ declare type ResolutionMap = {
         [range: string]: string;
     };
 };
+declare type Node = {
+    id: number;
+    name: string;
+    version: string;
+};
+declare type Link = {
+    sourceId: number;
+    targetId: number;
+};
 declare type DependencyGraph = {
-    nodes: {
-        id: number;
-        name: string;
-        version: string;
-    }[];
-    links: {
-        sourceId: number;
-        targetId: number;
-    }[];
+    nodes: Node[];
+    links: Link[];
 };
 export declare function createDependencyGraph(manifests: PackageManifest[], resolutionMap: ResolutionMap): DependencyGraph;
 export {};
