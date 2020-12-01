@@ -2,6 +2,13 @@
 
 Construct a node dependency graph. Resolves dependencies, devDependencies and peerDependencies.
 
+### Features
+
+- Support circular dependencies.
+- Support circular peerDependencies.
+- Create duplicate versions of a package when there is a peerDependency conflict.
+- Ignore optional dependencies and peer-dependencies if they cannot be fulfilled.
+
 ### Usage
 
 ```js
@@ -35,8 +42,7 @@ const packageManifests = [
 const resolutionMap = {
   "B": { "^1.0.0": "1.1.0" },
   "C": { "^1.0.0": "1.0.1" }
-}
-
+} 
 const graph = createDependencyGraph(packageManifests, resolutionMap);
 console.log(graph);
 /*
