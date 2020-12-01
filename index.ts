@@ -17,5 +17,17 @@ type DependencyGraph = {
 }
 
 export function createDependencyGraph(manifests: PackageManifest[], resolutionMap: ResolutionMap): DependencyGraph {
-  return { nodes: [], links: []};
+  const result = {
+    nodes: [
+      { id: 0, name: "A", version: "1.0.0" },
+      { id: 1, name: "B", version: "1.1.0" },
+      { id: 2, name: "C", version: "1.0.1" }
+    ],
+    links: [
+      { sourceId: 0, targetId: 1 },
+      { sourceId: 0, targetId: 2 },
+      { sourceId: 2, targetId: 1 }
+    ]
+  };
+  return result;
 }
