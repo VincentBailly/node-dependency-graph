@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "types": "index.d.ts",
+  "repository": "github:VincentBailly/node-dependency-graph",
   "license": "MIT",
   "devDependencies": {
     "@types/node": "^14.14.10",
