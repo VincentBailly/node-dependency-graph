@@ -42,7 +42,8 @@ function getLinks(manifests: PackageManifest[], resolutionMap: ResolutionMap): {
     const parentVersion = m.version;
     // TODO: add conditionally optional dependencies
     // TODO: fail gracefully if dependencies are unfulfilled
-    const dependencies = {...m.dependencies, ...( m.isLocal ? m.devDependencies : {})};
+    const optionalDependencies = m.optionalDependencies || {};
+    const dependencies = {...m.dependencies, ...( m.isLocal ? m.devDependencies : {}), ...optionalDependencies};
     return Object.keys(dependencies).map(k => {
       const childName = k;
       const childRange = dependencies[k];
