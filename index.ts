@@ -21,10 +21,15 @@ type DependencyGraph = {
 
 export function createDependencyGraph(manifests: PackageManifest[], resolutionMap: ResolutionMap): DependencyGraph {
   const nodes = getNodes(manifests);
+  const nodesIndexByNameAndVersion = nodes.reduce((a, n) => {
+    a[n.name] = a[n.name] || {};
+    a[n.name][n.version] = n.id;
+    return a;
+  }, {} as { [name: string]: { [version: string]: number } });
+
   const links = getRegularLinks(manifests, resolutionMap).map(l => {
-    // TODO: use better data structure to avoid this searc
-    const sourceId = nodes.filter(n => n.name === l.source.name && n.version === l.source.version)[0].id;
-    const targetId = nodes.filter(n => n.name === l.target.name && n.version === l.target.version)[0].id;
+    const sourceId = nodesIndexByNameAndVersion[l.source.name][l.source.version];
+    const targetId = nodesIndexByNameAndVersion[l.target.name][l.target.version];
     return { sourceId, targetId };
   }).sort((a, b) => {
     if (a.sourceId > b.sourceId) { return 1; }
