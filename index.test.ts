@@ -168,3 +168,32 @@ it("resolves optionalDependencies when available", () => {
 
   expect(graph).toEqual(expected)
 });
+
+it("ignore optionalDependencies when not available", () => {
+  const packageManifests = [
+    {
+      name: "A",
+      version: "1.0.0",
+      isLocal: false,
+      optionalDependencies: {
+        "B": "^1.0.0",
+        "C": "^1.0.0"
+      }
+    }
+  ];
+
+  const resolutionMap = {
+    "B": { "^1.0.0": "1.1.0" },
+    "C": { "^1.0.0": "1.0.1" }
+  } 
+  const graph = createDependencyGraph(packageManifests, resolutionMap);
+  const expected = {
+    nodes: [
+     { id: 0, name: "A", version: "1.0.0" }
+    ],
+    links: [
+    ]
+  };
+
+  expect(graph).toEqual(expected)
+});

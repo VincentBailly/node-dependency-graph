@@ -40,10 +40,22 @@ function getLinks(manifests: PackageManifest[], resolutionMap: ResolutionMap): {
   const links = manifests.map(m => {
     const parentName = m.name;
     const parentVersion = m.version;
-    // TODO: add conditionally optional dependencies
     // TODO: fail gracefully if dependencies are unfulfilled
     const optionalDependencies = m.optionalDependencies || {};
-    const dependencies = {...m.dependencies, ...( m.isLocal ? m.devDependencies : {}), ...optionalDependencies};
+    const resolvedOptionalDependencies = Object.keys(optionalDependencies).filter(k => {
+      const name = k;
+      const range = optionalDependencies[k];
+      if (!resolutionMap[name]) {
+        return false;
+      }
+      const version = resolutionMap[name][range];
+      if (!version) {
+        return false;
+      }
+      return Boolean(manifests.find(m => m.name === name && m.version === version));
+
+    }).map(k => ({ [k]: optionalDependencies[k] })).reduce((a,n) => ({...a, ...n}), {});
+    const dependencies = {...m.dependencies, ...( m.isLocal ? m.devDependencies : {}), ...resolvedOptionalDependencies};
     return Object.keys(dependencies).map(k => {
       const childName = k;
       const childRange = dependencies[k];
