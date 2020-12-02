@@ -21,12 +21,17 @@ type DependencyGraph = {
 
 export function createDependencyGraph(manifests: PackageManifest[], resolutionMap: ResolutionMap): DependencyGraph {
   const nodes = getNodes(manifests);
-  // TODO: sort links
-  const links = getLinks(manifests, resolutionMap).map(l => {
+  const links = getRegularLinks(manifests, resolutionMap).map(l => {
     // TODO: use better data structure to avoid this searc
     const sourceId = nodes.filter(n => n.name === l.source.name && n.version === l.source.version)[0].id;
     const targetId = nodes.filter(n => n.name === l.target.name && n.version === l.target.version)[0].id;
     return { sourceId, targetId };
+  }).sort((a, b) => {
+    if (a.sourceId > b.sourceId) { return 1; }
+    if (a.sourceId < b.sourceId) { return -1; }
+    if (a.targetId > b.targetId) { return 1; }
+    if (a.targetId < b.targetId) { return -1; }
+    return 0;
   });
 
   const result = {
@@ -36,7 +41,7 @@ export function createDependencyGraph(manifests: PackageManifest[], resolutionMa
   return result;
 }
 
-function getLinks(manifests: PackageManifest[], resolutionMap: ResolutionMap): { source: { name: string, version: string }, target: { name: string, version: string } }[] {
+function getRegularLinks(manifests: PackageManifest[], resolutionMap: ResolutionMap): { source: { name: string, version: string }, target: { name: string, version: string } }[] {
   const links = manifests.map(m => {
     const parentName = m.name;
     const parentVersion = m.version;
