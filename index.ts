@@ -1,3 +1,5 @@
+import { Graph } from "./graph";
+
 type PackageManifest = {
   name: string,
   version: string,
@@ -20,77 +22,85 @@ type DependencyGraph = {
 }
 
 export function createDependencyGraph(manifests: PackageManifest[], resolutionMap: ResolutionMap): DependencyGraph {
-  const nodes = getNodes(manifests);
-  const nodesIndexByNameAndVersion = nodes.reduce((a, n) => {
-    a[n.name] = a[n.name] || {};
-    a[n.name][n.version] = n.id;
-    return a;
-  }, {} as { [name: string]: { [version: string]: number } });
+  const graph = new Graph();
 
-  const links = getRegularLinks(manifests, resolutionMap).map(l => {
-    const sourceId = nodesIndexByNameAndVersion[l.source.name][l.source.version];
-    const targetId = nodesIndexByNameAndVersion[l.target.name][l.target.version];
-    return { sourceId, targetId };
-  }).sort((a, b) => {
-    if (a.sourceId > b.sourceId) { return 1; }
-    if (a.sourceId < b.sourceId) { return -1; }
-    if (a.targetId > b.targetId) { return 1; }
-    if (a.targetId < b.targetId) { return -1; }
-    return 0;
-  });
+  // Adding nodes to the graph
+  manifests.forEach(m => {
+    graph.addNode(m.name, m.version);
+  })
 
-  const result = {
-    nodes,
-    links
-  };
-  return result;
-}
-
-function getRegularLinks(manifests: PackageManifest[], resolutionMap: ResolutionMap): { source: { name: string, version: string }, target: { name: string, version: string } }[] {
-  const links = manifests.map(m => {
-    const parentName = m.name;
-    const parentVersion = m.version;
-    // TODO: fail gracefully if dependencies are unfulfilled
-    const optionalDependencies = m.optionalDependencies || {};
-    const resolvedOptionalDependencies = Object.keys(optionalDependencies).filter(k => {
-      const name = k;
-      const range = optionalDependencies[k];
-      if (!resolutionMap[name]) {
-        return false;
-      }
-      const version = resolutionMap[name][range];
-      if (!version) {
-        return false;
-      }
-      return Boolean(manifests.find(m => m.name === name && m.version === version));
-
-    }).map(k => ({ [k]: optionalDependencies[k] })).reduce((a,n) => ({...a, ...n}), {});
-    const dependencies = {...m.dependencies, ...( m.isLocal ? m.devDependencies : {}), ...resolvedOptionalDependencies};
-    return Object.keys(dependencies).map(k => {
-      const childName = k;
-      const childRange = dependencies[k];
-      const childVersion = resolutionMap[childName][childRange];
-      return { source: { name: parentName, version: parentVersion }, target: { name: childName, version: childVersion } };
-    });
-  }).reduce((acc, next) => [...acc, ...next ], []);
-  return links;
-}
-
-function getNodes(manifests: PackageManifest[]): Node[] {
-  const nodes = manifests.sort((a, b) => {
-    if (a.name > b.name) {
-      return 1;
+  // Adding dependencies to the graph
+  manifests.forEach(m => {
+    const sourceId = graph.getNode(m.name, m.version);
+    if (!sourceId) {
+      // TODO this is impossible, do something about it.
+      throw new Error("cannot find node");
+      return;
     }
-    if (a.name < b.name) {
-      return -1;
+    const dependencies = m.dependencies;
+    if (dependencies) {
+      Object.keys(dependencies).forEach(k => {
+        const targetName = k;
+        const targetRange = dependencies[k];
+        const targetVersion = resolutionMap[targetName][targetRange];
+        const targetId = graph.getNode(targetName, targetVersion);
+        if (!targetId) {
+          // TODO this is impossible, do something about it.
+          return;
+        }
+        graph.addLink(sourceId, targetId)
+      })
     }
-    if (a.version > b.version) {
-      return 1;
+  })
+
+  // Adding devDependencies to the graph
+  manifests.forEach(m => {
+    if (!m.isLocal) {
+      return;
     }
-    if (a.version < b.version) {
-      return -1;
+
+    const sourceId = graph.getNode(m.name, m.version);
+    if (!sourceId) {
+      // TODO this is impossible, do something about it.
+      return;
     }
-    return 0
-  }).map((m, i) => ({ id: i, name: m.name, version: m.version }));
-  return nodes;
+    const dependencies = m.devDependencies;
+    if (dependencies) {
+      Object.keys(dependencies).forEach(k => {
+        const targetName = k;
+        const targetRange = dependencies[k];
+        const targetVersion = resolutionMap[targetName][targetRange];
+        const targetId = graph.getNode(targetName, targetVersion);
+        if (!targetId) {
+          // TODO this is impossible, do something about it.
+          return;
+        }
+        graph.addLink(sourceId, targetId)
+      })
+    }
+  })
+
+  manifests.forEach(m => {
+    const sourceId = graph.getNode(m.name, m.version);
+    if (!sourceId) {
+      // TODO this is impossible, do something about it.
+      return;
+    }
+    const dependencies = m.optionalDependencies;
+    if (dependencies) {
+      Object.keys(dependencies).forEach(k => {
+        const targetName = k;
+        const targetRange = dependencies[k];
+        const targetVersion = resolutionMap[targetName][targetRange];
+        const targetId = graph.getNode(targetName, targetVersion);
+        if (!targetId) {
+          // This is legal, it means the optional dependency is not installed.
+          return;
+        }
+        graph.addLink(sourceId, targetId)
+      })
+    }
+  })
+
+  return graph.toJson();
 }
