@@ -102,5 +102,42 @@ export function createDependencyGraph(manifests: PackageManifest[], resolutionMa
     }
   })
 
+  manifests.forEach(m => {
+    const sourceId = graph.getNode(m.name, m.version);
+    if (!sourceId) {
+      // TODO this is impossible, do something about it.
+      return;
+    }
+    const dependencies = m.peerDependencies;
+    if (dependencies) {
+      Object.keys(dependencies).forEach(k => {
+        const targetName = k;
+        const targetRange = dependencies[k];
+        graph.addPeerLink(sourceId, targetName, targetRange);
+      })
+    }
+  })
+
+  // Resolve PeerLinks
+  // TODO: optimize this
+  graph.getPeerLinks().forEach(pl => {
+    const childrenMap = graph.links.get(pl.parentId.id);
+    if (childrenMap === undefined) {
+      // TODO: this cannot happen, make TS able to understand this.
+      return;
+    }
+
+    const siblings = Array.from(childrenMap.keys());
+    const result = siblings.filter(s => graph.reversedNodes.get(s)?.name === pl.targetName)[0];
+    if (!result) {
+      // TODO: fail for unmet peer dependencies
+    }
+    // TODO: don't manually create node id
+    graph.addLink(pl.sourceId, { id: result, type: "nodeId" });
+    graph.removePeerLink(pl.id);
+    
+  });
+
+
   return graph.toJson();
 }
