@@ -1,4 +1,4 @@
-type NodeId = {
+export type NodeId = {
   id: number;
   type: "nodeId";
 }

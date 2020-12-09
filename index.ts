@@ -1,4 +1,4 @@
-import { Graph } from "./graph";
+import { Graph, NodeId } from "./graph";
 
 type PackageManifest = {
   name: string,
@@ -121,19 +121,24 @@ export function createDependencyGraph(manifests: PackageManifest[], resolutionMa
   // Resolve PeerLinks
   // TODO: optimize this
   graph.getPeerLinks().forEach(pl => {
-    const childrenMap = graph.links.get(pl.parentId.id);
-    if (childrenMap === undefined) {
-      // TODO: this cannot happen, make TS able to understand this.
-      return;
-    }
+    function resolveChild(parent: NodeId, name: string): NodeId {
+      const childrenMap = graph.links.get(parent.id);
+      if (childrenMap === undefined) {
+        // TODO: this cannot happen, make TS able to understand this.
+        throw new Error();
+      }
 
-    const siblings = Array.from(childrenMap.keys());
-    const result = siblings.filter(s => graph.reversedNodes.get(s)?.name === pl.targetName)[0];
-    if (!result) {
-      // TODO: fail for unmet peer dependencies
+      const siblings = Array.from(childrenMap.keys());
+      const result = siblings.filter(s => graph.reversedNodes.get(s)?.name === name)[0];
+      if (!result) {
+        // TODO: fail for unmet peer dependencies
+          throw new Error();
+      }
+      return { id: result, type: "nodeId" };
     }
+    const result = graph.reversedNodes.get(pl.parentId.id)?.name === pl.targetName ? pl.parentId : resolveChild(pl.parentId, pl.targetName);
     // TODO: don't manually create node id
-    graph.addLink(pl.sourceId, { id: result, type: "nodeId" });
+    graph.addLink(pl.sourceId, result );
     graph.removePeerLink(pl.id);
     
   });
