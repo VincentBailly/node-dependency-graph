@@ -1,9 +1,9 @@
-import { Graph, NodeId } from "./graph";
+import { Graph } from "./graph";
 
-type PackageManifest = {
+export interface PackageManifest {
   name: string,
   version: string,
-  isLocal: boolean,
+  isLocal?: boolean,
   dependencies?: { [name: string]: string },
   devDependencies?: { [name: string]: string },
   optionalDependencies?: { [name: string]: string },
@@ -13,7 +13,7 @@ type PackageManifest = {
 
 type ResolutionMap = { [name: string]: { [range: string]: string } };
 
-type Node = { id: number, name: string, version: string };
+type Node = { id: number, name: string, version: string, resolvedPeerDependencies?: { [name: string]: number } };
 type Link = { sourceId: number, targetId: number };
 
 type DependencyGraph = {
@@ -31,7 +31,7 @@ export function createDependencyGraph(manifests: PackageManifest[], resolutionMa
 
   // Adding dependencies to the graph
   manifests.forEach(m => {
-    const sourceId = graph.getNode(m.name, m.version);
+    const sourceId = graph.getNodeWithoutPeerDependencies(m.name, m.version);
     if (!sourceId) {
       // TODO this is impossible, do something about it.
       throw new Error("cannot find node");
@@ -43,12 +43,12 @@ export function createDependencyGraph(manifests: PackageManifest[], resolutionMa
         const targetName = k;
         const targetRange = dependencies[k];
         const targetVersion = resolutionMap[targetName][targetRange];
-        const targetId = graph.getNode(targetName, targetVersion);
+        const targetId = graph.getNodeWithoutPeerDependencies(targetName, targetVersion);
         if (!targetId) {
           // TODO this is impossible, do something about it.
           return;
         }
-        graph.addLink(sourceId, targetId)
+        graph.addLink(sourceId.id, targetId.id)
       })
     }
   })
@@ -59,7 +59,7 @@ export function createDependencyGraph(manifests: PackageManifest[], resolutionMa
       return;
     }
 
-    const sourceId = graph.getNode(m.name, m.version);
+    const sourceId = graph.getNodeWithoutPeerDependencies(m.name, m.version);
     if (!sourceId) {
       // TODO this is impossible, do something about it.
       return;
@@ -70,18 +70,18 @@ export function createDependencyGraph(manifests: PackageManifest[], resolutionMa
         const targetName = k;
         const targetRange = dependencies[k];
         const targetVersion = resolutionMap[targetName][targetRange];
-        const targetId = graph.getNode(targetName, targetVersion);
+        const targetId = graph.getNodeWithoutPeerDependencies(targetName, targetVersion);
         if (!targetId) {
           // TODO this is impossible, do something about it.
           return;
         }
-        graph.addLink(sourceId, targetId)
+        graph.addLink(sourceId.id, targetId.id)
       })
     }
   })
 
   manifests.forEach(m => {
-    const sourceId = graph.getNode(m.name, m.version);
+    const sourceId = graph.getNodeWithoutPeerDependencies(m.name, m.version);
     if (!sourceId) {
       // TODO this is impossible, do something about it.
       return;
@@ -92,18 +92,18 @@ export function createDependencyGraph(manifests: PackageManifest[], resolutionMa
         const targetName = k;
         const targetRange = dependencies[k];
         const targetVersion = resolutionMap[targetName][targetRange];
-        const targetId = graph.getNode(targetName, targetVersion);
+        const targetId = graph.getNodeWithoutPeerDependencies(targetName, targetVersion);
         if (!targetId) {
           // This is legal, it means the optional dependency is not installed.
           return;
         }
-        graph.addLink(sourceId, targetId)
+        graph.addLink(sourceId.id, targetId.id)
       })
     }
   })
 
   manifests.forEach(m => {
-    const sourceId = graph.getNode(m.name, m.version);
+    const sourceId = graph.getNodeWithoutPeerDependencies(m.name, m.version);
     if (!sourceId) {
       // TODO this is impossible, do something about it.
       return;
@@ -120,29 +120,34 @@ export function createDependencyGraph(manifests: PackageManifest[], resolutionMa
 
   // Resolve PeerLinks
   // TODO: optimize this
-  graph.getPeerLinks().forEach(pl => {
-    function resolveChild(parent: NodeId, name: string): NodeId {
-      const childrenMap = graph.links.get(parent.id);
-      if (childrenMap === undefined) {
-        // TODO: this cannot happen, make TS able to understand this.
-        throw new Error();
-      }
+  const sources = Array.from(graph.peerLinks.keys());
+  sources.forEach(sourceId => {
+    const parentIds = Array.from(graph.peerLinks.get(sourceId)!.keys());
+    parentIds.forEach(parentId => {
+      const pls = graph.peerLinks.get(sourceId)!.get(parentId)!;
+      pls.forEach(pl => {
+        function resolveChild(parent: number, name: string): number {
+          const childrenMap = graph.links.get(parent);
+          if (childrenMap === undefined) {
+            // TODO: this cannot happen, make TS able to understand this.
+            throw new Error();
+          }
 
-      const siblings = Array.from(childrenMap.keys());
-      const result = siblings.filter(s => graph.reversedNodes.get(s)?.name === name)[0];
-      if (!result) {
-        // TODO: fail for unmet peer dependencies
-          throw new Error();
-      }
-      return { id: result, type: "nodeId" };
-    }
-    const result = graph.reversedNodes.get(pl.parentId.id)?.name === pl.targetName ? pl.parentId : resolveChild(pl.parentId, pl.targetName);
-    // TODO: don't manually create node id
-    graph.addLink(pl.sourceId, result );
-    graph.removePeerLink(pl.id);
-    
+          const siblings = Array.from(childrenMap.keys());
+          const result = siblings.filter(s => graph.reversedNodes.get(s)?.name === name)[0];
+          if (!result) {
+            // TODO: fail for unmet peer dependencies
+              throw new Error();
+          }
+          return result
+        }
+        const result = graph.reversedNodes.get(parentId)?.name === pl.targetName ? parentId : resolveChild(parentId, pl.targetName);
+        // TODO: don't manually create node id
+        graph.addLink(sourceId, result );
+        graph.removePeerLink(sourceId, parentId, pl.targetName);
+      });
+    });
   });
-
 
   return graph.toJson();
 }

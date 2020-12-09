@@ -1,4 +1,4 @@
-import { createDependencyGraph } from ".";
+import { createDependencyGraph, PackageManifest } from ".";
 
 it("resolves basic graph", () => {
   const packageManifests = [
@@ -377,3 +377,64 @@ it("resolves parent as peer dependencies", () => {
 
   expect(graph).toEqual(expected)
 });
+
+it("creates virtual packages when needed", () => {
+  return;
+  const packageManifests : PackageManifest[] = [
+    {
+      name: "A",
+      version: "1.0.0",
+      isLocal: true,
+      dependencies: {
+        "B": "^1.0.0",
+        "C": "^1.0.0",
+        "D": "^2.0.0"
+      }
+    },
+    {
+      name: "B",
+      version: "1.1.0",
+      peerDependencies: {
+        "D": "*"
+      }
+    },
+    {
+      name: "C",
+      version: "1.0.1",
+      dependencies: {
+        "B": "^1.0.0",
+        "D": "^1.0.0"
+      }
+    },
+    {
+      name: "D",
+      version: "1.0.0"
+    },
+    {
+      name: "D",
+      version: "2.0.0"
+    }
+  ];
+
+  const resolutionMap = {
+    "B": { "^1.0.0": "1.1.0" },
+    "C": { "^1.0.0": "1.0.1" },
+    "D": { "^1.0.0": "1.0.0", "^2.0.0": "2.0.0" }
+  } 
+  const graph = createDependencyGraph(packageManifests, resolutionMap);
+  const expected = {
+    nodes: [
+      { id: 0, name: "A", version: "1.0.0" },
+      { id: 1, name: "B", version: "1.1.0" },
+      { id: 2, name: "C", version: "1.0.1" }
+    ],
+    links: [
+      { sourceId: 0, targetId: 1 },
+      { sourceId: 0, targetId: 2 },
+      { sourceId: 1, targetId: 0 }
+    ]
+  };
+
+  expect(graph).toEqual(expected)
+});
+// TODO: dedup virtual packages
