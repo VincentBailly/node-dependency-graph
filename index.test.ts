@@ -829,6 +829,101 @@ it("resolved a second convoluted case with a mix of peerDependencies and circula
   expect(graph).toEqual(expected)
 });
 
-// TODO: test optional peer dependencies
+it("resolves optional peer dependencies", () => {
+  const packageManifests = [
+    {
+      name: "A",
+      version: "1.0.0",
+      isLocal: true,
+      dependencies: {
+        "B": "^1.0.0",
+        "C": "^1.0.0"
+      }
+    },
+    {
+      name: "B",
+      version: "1.1.0",
+      isLocal: false,
+      peerDependencies: {
+        "C": "*"
+      },
+      peerDependenciesMeta: {
+        "C": { optional: true }
+      }
+    },
+    {
+      name: "C",
+      version: "1.0.1",
+      isLocal: false
+    }
+  ];
+
+  const resolutionMap = {
+    "B": { "^1.0.0": "1.1.0" },
+    "C": { "^1.0.0": "1.0.1" }
+  } 
+  const graph = createDependencyGraph(packageManifests, resolutionMap);
+  const expected = {
+    nodes: [
+      { id: 0, name: "A", version: "1.0.0" },
+      { id: 1, name: "B", version: "1.1.0" },
+      { id: 2, name: "C", version: "1.0.1" }
+    ],
+    links: [
+      { sourceId: 0, targetId: 1 },
+      { sourceId: 0, targetId: 2 },
+      { sourceId: 1, targetId: 2 }
+    ]
+  };
+
+  expect(graph).toEqual(expected)
+});
+
+it("ignores unfulfilled optional peer dependencies", () => {
+  const packageManifests = [
+    {
+      name: "A",
+      version: "1.0.0",
+      isLocal: true,
+      dependencies: {
+        "B": "^1.0.0"
+      }
+    },
+    {
+      name: "B",
+      version: "1.1.0",
+      isLocal: false,
+      peerDependencies: {
+        "C": "*"
+      },
+      peerDependenciesMeta: {
+        "C": { optional: true }
+      }
+    },
+    {
+      name: "C",
+      version: "1.0.1",
+      isLocal: false
+    }
+  ];
+
+  const resolutionMap = {
+    "B": { "^1.0.0": "1.1.0" },
+    "C": { "^1.0.0": "1.0.1" }
+  } 
+  const graph = createDependencyGraph(packageManifests, resolutionMap);
+  const expected = {
+    nodes: [
+      { id: 0, name: "A", version: "1.0.0" },
+      { id: 1, name: "B", version: "1.1.0" }
+    ],
+    links: [
+      { sourceId: 0, targetId: 1 }
+    ]
+  };
+
+  expect(graph).toEqual(expected)
+});
+
 // TODO: test peerDependencies that are unfulfilled
 // TODO: test peerDependencies that are fulfilled with an uncompatible version

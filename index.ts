@@ -114,7 +114,8 @@ export function createDependencyGraph(manifests: PackageManifest[], resolutionMa
       Object.keys(dependencies).forEach(k => {
         const targetName = k;
         const targetRange = dependencies[k];
-        graph.addPeerLink(sourceId, targetName, targetRange);
+        const optional = Boolean(m.peerDependenciesMeta && m.peerDependenciesMeta[k] && m.peerDependenciesMeta[k].optional)
+        graph.addPeerLink(sourceId, targetName, targetRange, optional);
       })
     }
   })
@@ -123,8 +124,8 @@ export function createDependencyGraph(manifests: PackageManifest[], resolutionMa
   // TODO: fail if peer dependency don't match version range
   let nextPeerDep = graph.getNextPeerLink();
   while (nextPeerDep !== undefined) {
-    const { parentId, sourceId, targetName } = nextPeerDep;
-    function resolveChild(parent: number, name: string): number {
+    const { parentId, sourceId, targetName, optional } = nextPeerDep;
+    function resolveChild(parent: number, name: string, optional: boolean): number | undefined {
       const childrenMap = graph.links.get(parent);
       if (childrenMap === undefined) {
         // TODO: this cannot happen, make TS able to understand this.
@@ -135,14 +136,21 @@ export function createDependencyGraph(manifests: PackageManifest[], resolutionMa
       const result = siblings.filter(s => graph.reversedNodes.get(s)?.name === name)[0];
       if (!result) {
         // TODO: fail for unmet peer dependencies
-          throw new Error();
+          if (optional) {
+            return undefined;
+          } else {
+            throw new Error(`Unmet peer dependency: ${name} in ${parent}`);
+          }
       }
       return result
     }
-    const result = graph.reversedNodes.get(parentId)?.name === targetName ? parentId : resolveChild(parentId, targetName);
-    // TODO: don't manually create node id
-    const newPackageId = graph.createVirtualNode(sourceId, targetName, result);
-    graph.changeChildren(parentId, sourceId, newPackageId);
+    const result = graph.reversedNodes.get(parentId)?.name === targetName ? parentId : resolveChild(parentId, targetName, optional);
+    if (result !== undefined) {
+      const newPackageId = graph.createVirtualNode(sourceId, targetName, result);
+      graph.changeChildren(parentId, sourceId, newPackageId);
+    } else {
+      graph.ignoredOptionalPeerDependencies.push({ parentId, sourceId, requestedName: targetName });
+    }
 
     nextPeerDep = graph.getNextPeerLink();
   }

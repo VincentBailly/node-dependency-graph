@@ -8,7 +8,8 @@ type PeerLinkId = {
 }
 type PeerLink = {
   targetName: string,
-  targetRange: string
+  targetRange: string,
+  optional: boolean
 };
 
 export class Graph {
@@ -18,6 +19,7 @@ export class Graph {
   reversedLinks: Map<number, Map<number, "link">>;
   nodeCounter: number;
   peerLinks: Map<number, PeerLink[]>;
+  ignoredOptionalPeerDependencies: { parentId: number, sourceId: number, requestedName: string }[];
 
   constructor() {
     this.nodes = {};
@@ -26,6 +28,7 @@ export class Graph {
     this.reversedLinks = new Map();
     this.nodeCounter = 0;
     this.peerLinks = new Map();
+    this.ignoredOptionalPeerDependencies = [];
   }
   addNode(name: string, version: string): void {
     const id = this.nodeCounter++;
@@ -104,7 +107,7 @@ export class Graph {
     return { id, type: "nodeId" };
   }
 
-  getNextPeerLink(): undefined | { parentId: number, sourceId: number, targetName: string, targetRange: string } {
+  getNextPeerLink(): undefined | { parentId: number, sourceId: number, targetName: string, targetRange: string, optional: boolean } {
     const packagesWithPeerLinks = this.peerLinks.keys();
     let next = packagesWithPeerLinks.next();
     while (!next.done) {
@@ -116,7 +119,14 @@ export class Graph {
         next = packagesWithPeerLinks.next();
         continue;
       }
-      const peerLinks = Array.from(this.peerLinks.get(next.value)!);
+      const ignored = this.ignoredOptionalPeerDependencies;
+      const peerLinks = Array.from(this.peerLinks.get(next.value)!).filter(o => {
+        return !ignored.some(i => {
+          debugger
+          return i.parentId === parents[0] && i.sourceId === next.value && i.requestedName === o.targetName
+        })
+
+      });
       if (peerLinks.length === 0) {
         // No one depends on this package anymore
         this.peerLinks.delete(next.value);
@@ -124,14 +134,14 @@ export class Graph {
         continue;
       }
       const first = peerLinks[0];
-      return { parentId: parents[0], sourceId: next.value, targetName: first.targetName, targetRange: first.targetRange };
+      return { parentId: parents[0], sourceId: next.value, targetName: first.targetName, targetRange: first.targetRange, optional: first.optional };
     }
     return undefined;
   }
 
-  addPeerLink(sourceId: NodeId, targetName: string, targetRange: string): void {
+  addPeerLink(sourceId: NodeId, targetName: string, targetRange: string, optional: boolean): void {
     this.peerLinks.set(sourceId.id, this.peerLinks.get(sourceId.id) || []);
-    this.peerLinks.get(sourceId.id)!.push({ targetName, targetRange });
+    this.peerLinks.get(sourceId.id)!.push({ targetName, targetRange, optional});
   }
 
   addLink(source: number, target: number): void {
