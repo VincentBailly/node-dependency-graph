@@ -441,4 +441,60 @@ it("creates virtual packages when needed", () => {
 
   expect(graph).toEqual(expected)
 });
+
+it("ignore links from unreachable nodes", () => {
+  const packageManifests : PackageManifest[] = [
+    {
+      name: "A",
+      version: "1.0.0",
+      isLocal: true,
+      dependencies: {
+        "B": "^1.0.0",
+        "D": "^2.0.0"
+      }
+    },
+    {
+      name: "B",
+      version: "1.1.0",
+      peerDependencies: {
+        "D": "*"
+      },
+      dependencies: {
+        "C": "^1.0.0"
+      }
+    },
+    {
+      name: "C",
+      version: "1.0.1"
+    },
+    {
+      name: "D",
+      version: "2.0.0"
+    }
+  ];
+
+  const resolutionMap = {
+    "B": { "^1.0.0": "1.1.0" },
+    "C": { "^1.0.0": "1.0.1" },
+    "D": { "^2.0.0": "2.0.0" }
+  } 
+  const graph = createDependencyGraph(packageManifests, resolutionMap);
+  const expected = {
+    nodes: [
+      { id: 0, name: "A", version: "1.0.0" },
+      { id: 1, name: "B", version: "1.1.0" },
+      { id: 2, name: "C", version: "1.0.1" },
+      { id: 3, name: "D", version: "2.0.0" }
+    ],
+    links: [
+      { sourceId: 0, targetId: 1 },
+      { sourceId: 0, targetId: 3 },
+      { sourceId: 1, targetId: 2 },
+      { sourceId: 1, targetId: 3 }
+    ]
+  };
+
+  expect(graph).toEqual(expected)
+});
+
 // TODO: dedup virtual packages

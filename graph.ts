@@ -154,7 +154,7 @@ export class Graph {
     }).reduce((a,n) => ({...a, ...n}), {});
     const nodes = sortedNodes.map(n => ({ name: n.name, version: n.version, id: idMapping[n.internalId]}));
 
-    const links = Array.from(this.links.keys()).map(sourceId => {
+    const links = Array.from(this.links.keys()).filter(k => reachableNodes.has(k)).map(sourceId => {
       return Array.from((this.links.get(sourceId) as Map<number, "link">).keys()).map(targetId => {
         return { sourceId: idMapping[sourceId], targetId: idMapping[targetId] };
       })
