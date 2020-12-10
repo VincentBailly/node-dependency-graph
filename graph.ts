@@ -13,7 +13,7 @@ type PeerLink = {
 
 export class Graph {
   nodes: { [name: string] : { [version: string]: { id: number, peerDeps: { [name: string]: number } }[] } };
-  reversedNodes: Map<number, { name: string, version: string }>;
+  reversedNodes: Map<number, { name: string, version: string, peerDeps: { [name: string]: number } }>;
   links: Map<number, Map<number, "link">>;
   reversedLinks: Map<number, Map<number, "link">>;
   nodeCounter: number;
@@ -31,8 +31,44 @@ export class Graph {
     const id = this.nodeCounter++;
     this.nodes[name] = this.nodes[name] || {};
     this.nodes[name][version] = [{ id, peerDeps: {} }];
-    this.reversedNodes.set(id, { name, version });
+    this.reversedNodes.set(id, { name, version, peerDeps: {} });
   }
+
+  createVirtualNode(sourceId: number, fulfilledPeerDepName: string, fulfilledPeerDep: number): number {
+    const oldNode = this.reversedNodes.get(sourceId)!;
+    const newNodeId = this.nodeCounter++;
+    const name = oldNode.name;
+    const version = oldNode.version;
+    const peerDeps = oldNode.peerDeps;
+    // 1 creating the node
+    this.nodes[name][version].push({ id: newNodeId, peerDeps: { ...peerDeps, [fulfilledPeerDepName]: fulfilledPeerDep } });
+    // 2 duplicating links
+    const newLinks = new Map(this.links.get(sourceId)!);
+    this.links.set(newNodeId, newLinks);
+    // 3 update reveredLinks
+    newLinks.forEach((_, key) => {
+      this.reversedLinks.set(key, this.reversedLinks.get(key) || new Map());
+      this.reversedLinks.get(key)!.set(newNodeId, "link");
+    })
+
+    // 4 add resolved dep as link
+    this.links.get(newNodeId)!.set(fulfilledPeerDep, "link");
+    // If the resolvedPeerDependency is the root node, then it may not have have any reversedLinks yet.
+    this.reversedLinks.set(fulfilledPeerDep, this.reversedLinks.get(fulfilledPeerDep) || new Map());
+    
+    this.reversedLinks.get(fulfilledPeerDep)!.set(newNodeId, "link");
+    return newNodeId;
+  }
+
+  changeChildren(parentId: number, oldChildId: number, newChildId: number): void {
+    this.links.get(parentId)!.delete(oldChildId);
+    this.links.get(parentId)!.set(newChildId, "link");
+
+    this.reversedLinks.get(oldChildId)!.delete(parentId);
+    this.reversedLinks.set(newChildId, this.reversedLinks.get(newChildId) || new Map());
+    this.reversedLinks.get(newChildId)!.set(parentId, "link");
+  }
+
   getNodeWithoutPeerDependencies(name: string, version: string): NodeId | undefined {
     if (!this.nodes[name] || this.nodes[name][version] === undefined) {
       return undefined;
@@ -82,12 +118,29 @@ export class Graph {
   }
 
   toJson(): { nodes:  { name: string, version: string, id: number }[], links: { sourceId: number, targetId: number }[] } {
+    function getReachableNodes(graph: Graph) {
+      const reached = new Set();
+      // TODO: DANGER: undocumented assumption: the root of the graph is the first node.
+      const waiting = [0];
+      while (waiting.length > 0) {
+        const next = waiting.pop();
+        if (next === undefined || reached.has(next)) {
+          continue;
+        }
+        reached.add(next);
+        const deps = Array.from(graph.links.get(next)?.keys() || []);
+        waiting.push(...deps);
+      }
+      return reached;
+    }
+    const reachableNodes = getReachableNodes(this);
     const sortedNodes = Object.keys(this.nodes).map(name => {
       return Object.keys(this.nodes[name]).map(version => {
         const list = this.nodes[name][version];
-        const id = list[0].id;
-        return { internalId: id, name, version };
-     })
+        return list.map(n => {
+          return { internalId: n.id, name, version };
+        }).filter(o => reachableNodes.has(o.internalId))
+     }).reduce((a,n) => [...a, ...n], [])
     }).reduce((a,n) => [...a,...n], [])
     .sort((a,b) => {
       if (a.name > b.name) { return 1; }

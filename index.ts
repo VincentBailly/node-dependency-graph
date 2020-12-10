@@ -45,6 +45,7 @@ export function createDependencyGraph(manifests: PackageManifest[], resolutionMa
         const targetVersion = resolutionMap[targetName][targetRange];
         const targetId = graph.getNodeWithoutPeerDependencies(targetName, targetVersion);
         if (!targetId) {
+          throw new Error("cannot find target");
           // TODO this is impossible, do something about it.
           return;
         }
@@ -120,6 +121,7 @@ export function createDependencyGraph(manifests: PackageManifest[], resolutionMa
 
   // Resolve PeerLinks
   // TODO: optimize this
+  // TODO: use iterator to be able to do one peer dependency at the time
   const sources = Array.from(graph.peerLinks.keys());
   sources.forEach(sourceId => {
     const parentIds = Array.from(graph.peerLinks.get(sourceId)!.keys());
@@ -143,7 +145,9 @@ export function createDependencyGraph(manifests: PackageManifest[], resolutionMa
         }
         const result = graph.reversedNodes.get(parentId)?.name === pl.targetName ? parentId : resolveChild(parentId, pl.targetName);
         // TODO: don't manually create node id
-        graph.addLink(sourceId, result );
+        const newPackageId = graph.createVirtualNode(sourceId, pl.targetName, result);
+        graph.changeChildren(parentId, sourceId, newPackageId);
+
         graph.removePeerLink(sourceId, parentId, pl.targetName);
       });
     });

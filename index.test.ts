@@ -116,9 +116,7 @@ it("does not resolve devDependency of remote packages", () => {
   const graph = createDependencyGraph(packageManifests, resolutionMap);
   const expected = {
     nodes: [
-      { id: 0, name: "A", version: "1.0.0" },
-      { id: 1, name: "B", version: "1.1.0" },
-      { id: 2, name: "C", version: "1.0.1" }
+      { id: 0, name: "A", version: "1.0.0" }
     ],
     links: []
   };
@@ -244,6 +242,15 @@ it("sorts links", () => {
 it("sorts nodes", () => {
   const packageManifests = [
     {
+      name: "A",
+      version: "1.0.0",
+      isLocal: true,
+      dependencies: {
+        "C": "^1.0.0",
+        "B": "^1.0.0"
+      }
+    },
+    {
       name: "C",
       version: "1.0.1",
       isLocal: false
@@ -252,15 +259,6 @@ it("sorts nodes", () => {
       name: "B",
       version: "1.1.0",
       isLocal: false
-    },
-    {
-      name: "A",
-      version: "1.0.0",
-      isLocal: true,
-      dependencies: {
-        "C": "^1.0.0",
-        "B": "^1.0.0"
-      }
     }
   ];
 
