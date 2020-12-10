@@ -1,4 +1,5 @@
 node_modules
+tsconfig.tsbuildinfo
 *.js
 !jest.config.js
 *.d.ts
