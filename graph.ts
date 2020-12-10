@@ -122,7 +122,6 @@ export class Graph {
       const ignored = this.ignoredOptionalPeerDependencies;
       const peerLinks = Array.from(this.peerLinks.get(next.value)!).filter(o => {
         return !ignored.some(i => {
-          debugger
           return i.parentId === parents[0] && i.sourceId === next.value && i.requestedName === o.targetName
         })
 

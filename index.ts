@@ -1,4 +1,5 @@
 import { Graph } from "./graph";
+import * as semver from "semver";
 
 export interface PackageManifest {
   name: string,
@@ -124,7 +125,7 @@ export function createDependencyGraph(manifests: PackageManifest[], resolutionMa
   // TODO: fail if peer dependency don't match version range
   let nextPeerDep = graph.getNextPeerLink();
   while (nextPeerDep !== undefined) {
-    const { parentId, sourceId, targetName, optional } = nextPeerDep;
+    const { parentId, sourceId, targetName, optional, targetRange } = nextPeerDep;
     function resolveChild(parent: number, name: string, optional: boolean): number | undefined {
       const childrenMap = graph.links.get(parent);
       if (childrenMap === undefined) {
@@ -141,6 +142,10 @@ export function createDependencyGraph(manifests: PackageManifest[], resolutionMa
           } else {
             throw new Error(`Unmet peer dependency: ${name} in ${parent}`);
           }
+      }
+      const version = graph.reversedNodes.get(result)!.version;
+      if (!semver.satisfies(version, targetRange)) {
+        console.error(`[WARNING] unmatching peer dependency`);
       }
       return result
     }
