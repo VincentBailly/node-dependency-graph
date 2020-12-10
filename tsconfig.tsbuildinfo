@@ -162,12 +162,12 @@
         "affectsGlobalScope": false
       },
       "./graph.ts": {
-        "version": "10cb5a41d4d4bd9769ec6b381d6d1aa763f48d86a3e74929c00c682a36d8336a",
-        "signature": "667574a1fb8ed74feed8ec0dc31f073c16583fc59154a5443cc37240738647a9",
+        "version": "51b2ffdaaf84d00e259ede9d95be634250b6f94c8c8a4a8f8cd2bb4a860dea6c",
+        "signature": "cd2b86e028b8e229d3af1e1f165fb4d739edc0004d57b96595ed996298e20d33",
         "affectsGlobalScope": false
       },
       "./index.ts": {
-        "version": "09679c6a2f4a5311367a20f97a0fdbc0b970159e703c860c83c21086d4ab31a4",
+        "version": "00e62c823a4cf973f54c16d4adabdb4cfd62bf65d5393c24982a095edb8a8b8e",
         "signature": "e3ef0bbb33f9205e577e5370cd46f609f0db5afa6b466900dac7c300852a6420",
         "affectsGlobalScope": false
       },

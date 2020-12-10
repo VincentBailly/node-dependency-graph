@@ -122,36 +122,32 @@ export function createDependencyGraph(manifests: PackageManifest[], resolutionMa
   // Resolve PeerLinks
   // TODO: optimize this
   // TODO: use iterator to be able to do one peer dependency at the time
-  const sources = Array.from(graph.peerLinks.keys());
-  sources.forEach(sourceId => {
-    const parentIds = Array.from(graph.peerLinks.get(sourceId)!.keys());
-    parentIds.forEach(parentId => {
-      const pls = graph.peerLinks.get(sourceId)!.get(parentId)!;
-      pls.forEach(pl => {
-        function resolveChild(parent: number, name: string): number {
-          const childrenMap = graph.links.get(parent);
-          if (childrenMap === undefined) {
-            // TODO: this cannot happen, make TS able to understand this.
-            throw new Error();
-          }
+  // TODO: fail if peer dependency don't match version range
+  let nextPeerDep = graph.getNextPeerLink();
+  while (nextPeerDep !== undefined) {
+    const { parentId, sourceId, targetName } = nextPeerDep;
+    function resolveChild(parent: number, name: string): number {
+      const childrenMap = graph.links.get(parent);
+      if (childrenMap === undefined) {
+        // TODO: this cannot happen, make TS able to understand this.
+        throw new Error();
+      }
 
-          const siblings = Array.from(childrenMap.keys());
-          const result = siblings.filter(s => graph.reversedNodes.get(s)?.name === name)[0];
-          if (!result) {
-            // TODO: fail for unmet peer dependencies
-              throw new Error();
-          }
-          return result
-        }
-        const result = graph.reversedNodes.get(parentId)?.name === pl.targetName ? parentId : resolveChild(parentId, pl.targetName);
-        // TODO: don't manually create node id
-        const newPackageId = graph.createVirtualNode(sourceId, pl.targetName, result);
-        graph.changeChildren(parentId, sourceId, newPackageId);
+      const siblings = Array.from(childrenMap.keys());
+      const result = siblings.filter(s => graph.reversedNodes.get(s)?.name === name)[0];
+      if (!result) {
+        // TODO: fail for unmet peer dependencies
+          throw new Error();
+      }
+      return result
+    }
+    const result = graph.reversedNodes.get(parentId)?.name === targetName ? parentId : resolveChild(parentId, targetName);
+    // TODO: don't manually create node id
+    const newPackageId = graph.createVirtualNode(sourceId, targetName, result);
+    graph.changeChildren(parentId, sourceId, newPackageId);
 
-        graph.removePeerLink(sourceId, parentId, pl.targetName);
-      });
-    });
-  });
+    nextPeerDep = graph.getNextPeerLink();
+  }
 
   return graph.toJson();
 }

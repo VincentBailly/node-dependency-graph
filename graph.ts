@@ -17,7 +17,7 @@ export class Graph {
   links: Map<number, Map<number, "link">>;
   reversedLinks: Map<number, Map<number, "link">>;
   nodeCounter: number;
-  peerLinks: Map<number, Map<number, PeerLink[]>>;
+  peerLinks: Map<number, PeerLink[]>;
 
   constructor() {
     this.nodes = {};
@@ -62,6 +62,7 @@ export class Graph {
     const newNodeId = this.nodeCounter++;
     // 1 creating the node
     this.nodes[name][version].push({ id: newNodeId, peerDeps: { ...peerDeps, [fulfilledPeerDepName]: fulfilledPeerDep } });
+    this.reversedNodes.set(newNodeId, { name, version, peerDeps: { ...peerDeps, [fulfilledPeerDepName]: fulfilledPeerDep } });
     // 2 duplicating links
     const newLinks = new Map(this.links.get(sourceId)!);
     this.links.set(newNodeId, newLinks);
@@ -99,30 +100,34 @@ export class Graph {
     return { id, type: "nodeId" };
   }
 
-  addPeerLink(sourceId: NodeId, targetName: string, targetRange: string): void {
-    const parents = this.reversedLinks.get(sourceId.id);
-    if (parents === undefined) {
-      // TODO fail hard, peerDependencies should be fullfilled
-      return
+  getNextPeerLink(): undefined | { parentId: number, sourceId: number, targetName: string, targetRange: string } {
+    const packagesWithPeerLinks = this.peerLinks.keys();
+    let next = packagesWithPeerLinks.next();
+    while (!next.done) {
+      // TODO: use iterator instead of Array.from
+      const parents = Array.from(this.reversedLinks.get(next.value)!.keys());
+      if (parents.length === 0) {
+        // No one depends on this package anymore
+        this.peerLinks.delete(next.value);
+        next = packagesWithPeerLinks.next();
+        continue;
+      }
+      const peerLinks = Array.from(this.peerLinks.get(next.value)!);
+      if (peerLinks.length === 0) {
+        // No one depends on this package anymore
+        this.peerLinks.delete(next.value);
+        next = packagesWithPeerLinks.next();
+        continue;
+      }
+      const first = peerLinks[0];
+      return { parentId: parents[0], sourceId: next.value, targetName: first.targetName, targetRange: first.targetRange };
     }
-    const keys = parents.keys();
-    let next = keys.next();
-    while(!next.done) {
-      const key = next.value;
-      const parentId: NodeId = { type: "nodeId", id: key }
-      const mapFromSource = this.peerLinks.get(sourceId.id) || new Map();
-      this.peerLinks.set(sourceId.id, mapFromSource);
-      const mapFromParent: PeerLink[] = mapFromSource.get(parentId.id) || [];
-      mapFromSource.set(parentId.id, mapFromParent);
-      mapFromParent.push({ targetName, targetRange });
-      next = keys.next();
-    }
+    return undefined;
   }
 
-  removePeerLink(sourceId: number, parentId: number, name: string): void {
-    // TODO: avoid using bang
-    const list = this.peerLinks.get(sourceId)!.get(parentId)!;
-    this.peerLinks.get(sourceId)!.set(parentId, list.filter(o => o.targetName !== name));;
+  addPeerLink(sourceId: NodeId, targetName: string, targetRange: string): void {
+    this.peerLinks.set(sourceId.id, this.peerLinks.get(sourceId.id) || []);
+    this.peerLinks.get(sourceId.id)!.push({ targetName, targetRange });
   }
 
   addLink(source: number, target: number): void {
