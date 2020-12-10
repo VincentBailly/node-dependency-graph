@@ -925,5 +925,36 @@ it("ignores unfulfilled optional peer dependencies", () => {
   expect(graph).toEqual(expected)
 });
 
-// TODO: test peerDependencies that are unfulfilled
+it("fails when peer dependencies are unmet", () => {
+  const packageManifests = [
+    {
+      name: "A",
+      version: "1.0.0",
+      isLocal: true,
+      dependencies: {
+        "B": "^1.0.0",
+      }
+    },
+    {
+      name: "B",
+      version: "1.1.0",
+      isLocal: false,
+      peerDependencies: {
+        "C": "*"
+      }
+    },
+    {
+      name: "C",
+      version: "1.0.1",
+      isLocal: false
+    }
+  ];
+
+  const resolutionMap = {
+    "B": { "^1.0.0": "1.1.0" },
+    "C": { "^1.0.0": "1.0.1" }
+  } 
+  expect(() => createDependencyGraph(packageManifests, resolutionMap)).toThrow();
+});
+
 // TODO: test peerDependencies that are fulfilled with an uncompatible version
