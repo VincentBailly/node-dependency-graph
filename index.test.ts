@@ -661,3 +661,88 @@ it("handles packages with two peerDependencies", () => {
 
   expect(graph).toEqual(expected)
 });
+
+it("resolved a convoluted case with a mix of peerDependencies and circular dependencies", () => {
+  const packageManifests : PackageManifest[] = [
+    {
+      name: "A",
+      version: "1.0.0",
+      dependencies: {
+        "B": "^1.0.0",
+        "E": "^2.0.0"
+      }
+    },
+    {
+      name: "B",
+      version: "1.0.0",
+      dependencies: {
+        "C": "^1.0.0",
+        "D": "^1.0.0"
+      },
+      peerDependencies: {
+        "E": "*"
+      }
+    },
+    {
+      name: "C",
+      version: "1.0.0",
+      dependencies: {
+        "B": "^1.0.0",
+        "E": "^1.0.0"
+      },
+      peerDependencies: {
+        "D": "*"
+      }
+    },
+    {
+      name: "D",
+      version: "1.0.0"
+    },
+    {
+      name: "E",
+      version: "1.0.0"
+    },
+    {
+      name: "E",
+      version: "2.0.0"
+    }
+  ];
+
+  const resolutionMap = {
+    "B": { "^1.0.0": "1.0.0" },
+    "C": { "^1.0.0": "1.0.0" },
+    "D": { "^1.0.0": "1.0.0" },
+    "E": { "^1.0.0": "1.0.0", "^2.0.0": "2.0.0" }
+  } 
+  const graph = createDependencyGraph(packageManifests, resolutionMap);
+  const expected = {
+    nodes: [
+      { id: 0, name: "A", version: "1.0.0" },
+      { id: 1, name: "B", version: "1.0.0" },
+      { id: 2, name: "B", version: "1.0.0" },
+      { id: 3, name: "C", version: "1.0.0" },
+      { id: 4, name: "D", version: "1.0.0" },
+      { id: 5, name: "E", version: "1.0.0" },
+      { id: 6, name: "E", version: "2.0.0" }
+    ],
+    links: [
+      { sourceId: 0, targetId: 1 },
+      { sourceId: 0, targetId: 6 },
+      { sourceId: 1, targetId: 3 },
+      { sourceId: 1, targetId: 4 },
+      { sourceId: 1, targetId: 6 },
+      { sourceId: 2, targetId: 3 },
+      { sourceId: 2, targetId: 4 },
+      { sourceId: 2, targetId: 5 },
+      { sourceId: 3, targetId: 2 },
+      { sourceId: 3, targetId: 4 },
+      { sourceId: 3, targetId: 5 }
+    ]
+  };
+
+  expect(graph).toEqual(expected)
+});
+
+// TODO: test optional dependencies
+// TODO: test peerDependencies that are unfulfilled
+// TODO: test peerDependencies that are fulfilled with an uncompatible version
