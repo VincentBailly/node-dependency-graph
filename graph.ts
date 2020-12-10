@@ -76,8 +76,12 @@ export class Graph {
     this.links.get(newNodeId)!.set(fulfilledPeerDep, "link");
     // If the resolvedPeerDependency is the root node, then it may not have have any reversedLinks yet.
     this.reversedLinks.set(fulfilledPeerDep, this.reversedLinks.get(fulfilledPeerDep) || new Map());
-    
     this.reversedLinks.get(fulfilledPeerDep)!.set(newNodeId, "link");
+
+    // 5 copy peerDeps from source
+    const peerDepsToCopy = (this.peerLinks.get(sourceId) || []).filter(o => o.targetName !== fulfilledPeerDepName);
+    this.peerLinks.set(newNodeId, peerDepsToCopy)
+
     return newNodeId;
   }
 

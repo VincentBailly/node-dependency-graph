@@ -120,8 +120,6 @@ export function createDependencyGraph(manifests: PackageManifest[], resolutionMa
   })
 
   // Resolve PeerLinks
-  // TODO: optimize this
-  // TODO: use iterator to be able to do one peer dependency at the time
   // TODO: fail if peer dependency don't match version range
   let nextPeerDep = graph.getNextPeerLink();
   while (nextPeerDep !== undefined) {

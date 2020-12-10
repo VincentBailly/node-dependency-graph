@@ -605,3 +605,59 @@ it("handles circular peer dependencies", () => {
 
   expect(graph).toEqual(expected)
 });
+
+it("handles packages with two peerDependencies", () => {
+  const packageManifests : PackageManifest[] = [
+    {
+      name: "A",
+      version: "1.0.0",
+      isLocal: true,
+      dependencies: {
+        "B": "^1.0.0",
+        "C": "^1.0.0",
+        "D": "^1.0.0"
+      }
+    },
+    {
+      name: "B",
+      version: "1.0.0",
+    },
+    {
+      name: "C",
+      version: "1.0.0",
+    },
+    {
+      name: "D",
+      version: "1.0.0",
+      peerDependencies: {
+        "B": "*",
+        "C": "*"
+      }
+    }
+  ];
+
+  const resolutionMap = {
+    "B": { "^1.0.0": "1.0.0" },
+    "C": { "^1.0.0": "1.0.0" },
+    "D": { "^1.0.0": "1.0.0" }
+  } 
+  const graph = createDependencyGraph(packageManifests, resolutionMap);
+  //console.log(JSON.stringify(graph, undefined, 2));
+  const expected = {
+    nodes: [
+      { id: 0, name: "A", version: "1.0.0" },
+      { id: 1, name: "B", version: "1.0.0" },
+      { id: 2, name: "C", version: "1.0.0" },
+      { id: 3, name: "D", version: "1.0.0" }
+    ],
+    links: [
+      { sourceId: 0, targetId: 1 },
+      { sourceId: 0, targetId: 2 },
+      { sourceId: 0, targetId: 3 },
+      { sourceId: 3, targetId: 1 },
+      { sourceId: 3, targetId: 2 }
+    ]
+  };
+
+  expect(graph).toEqual(expected)
+});
