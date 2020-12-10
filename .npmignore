@@ -1,5 +1,7 @@
 .gitignore
 *.ts
 !*.d.ts
-tsconfig.json
+tsconfig.*
 yarn.lock
+jest.config.js
+
