@@ -6,7 +6,7 @@
   "repository": "github:VincentBailly/node-dependency-graph",
   "license": "MIT",
   "scripts": {
-    "test": "jest",
+    "test": "yarn build && jest",
     "build": "tsc",
     "watch": "tsc --watch"
   },
