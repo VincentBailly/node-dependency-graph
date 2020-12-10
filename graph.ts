@@ -36,10 +36,30 @@ export class Graph {
 
   createVirtualNode(sourceId: number, fulfilledPeerDepName: string, fulfilledPeerDep: number): number {
     const oldNode = this.reversedNodes.get(sourceId)!;
-    const newNodeId = this.nodeCounter++;
+
     const name = oldNode.name;
     const version = oldNode.version;
     const peerDeps = oldNode.peerDeps;
+
+    const matchingNodeWithSamePeerDeps = this.nodes[name][version].filter(o => {
+      if (Object.keys(o.peerDeps).length !== (Object.keys(peerDeps).length + 1)) { return false; }
+      for(let pd in peerDeps) {
+        if (o.peerDeps[pd] !== peerDeps[pd]) {
+          return false;
+        }
+      }
+      if (o.peerDeps[fulfilledPeerDepName] !== fulfilledPeerDep) {
+        return false
+      }
+      return true;
+    })[0];
+
+
+    if (matchingNodeWithSamePeerDeps !== undefined) {
+      return matchingNodeWithSamePeerDeps.id;
+    }
+
+    const newNodeId = this.nodeCounter++;
     // 1 creating the node
     this.nodes[name][version].push({ id: newNodeId, peerDeps: { ...peerDeps, [fulfilledPeerDepName]: fulfilledPeerDep } });
     // 2 duplicating links
