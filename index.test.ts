@@ -379,7 +379,6 @@ it("resolves parent as peer dependencies", () => {
 });
 
 it("creates virtual packages when needed", () => {
-  return;
   const packageManifests : PackageManifest[] = [
     {
       name: "A",
@@ -426,12 +425,19 @@ it("creates virtual packages when needed", () => {
     nodes: [
       { id: 0, name: "A", version: "1.0.0" },
       { id: 1, name: "B", version: "1.1.0" },
-      { id: 2, name: "C", version: "1.0.1" }
+      { id: 2, name: "B", version: "1.1.0" },
+      { id: 3, name: "C", version: "1.0.1" },
+      { id: 4, name: "D", version: "1.0.0" },
+      { id: 5, name: "D", version: "2.0.0" }
     ],
     links: [
       { sourceId: 0, targetId: 1 },
-      { sourceId: 0, targetId: 2 },
-      { sourceId: 1, targetId: 0 }
+      { sourceId: 0, targetId: 3 },
+      { sourceId: 0, targetId: 5 },
+      { sourceId: 1, targetId: 5 },
+      { sourceId: 2, targetId: 4 },
+      { sourceId: 3, targetId: 2 },
+      { sourceId: 3, targetId: 4 }
     ]
   };
 
