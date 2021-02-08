@@ -165,6 +165,21 @@ export function createDependencyGraph(
       name: string,
       optional: boolean
     ): number | undefined {
+      const directChildrenMap = graph.links.get(sourceId);
+      if (directChildrenMap) {
+        const children = Array.from(directChildrenMap.keys());
+        const result = children.filter(
+          (s) => graph.reversedNodes.get(s)?.name === name
+        )[0];
+        if (result) {
+          const version = graph.reversedNodes.get(result)!.version;
+          if (!semver.satisfies(version, targetRange)) {
+            console.error(`[WARNING] unmatching peer dependency`);
+          }
+          // Ignores this peerDependency
+          return undefined;
+        }
+      }
       const childrenMap = graph.links.get(parent);
       if (childrenMap === undefined) {
         // TODO: this cannot happen, make TS able to understand this.

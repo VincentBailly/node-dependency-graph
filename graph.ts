@@ -163,7 +163,9 @@ export class Graph {
     let next = packagesWithPeerLinks.next();
     while (!next.done) {
       // TODO: use iterator instead of Array.from
-      const parents = Array.from(this.reversedLinks.get(next.value)!.keys());
+      const parents = Array.from(
+        this.reversedLinks.get(next.value)?.keys() || []
+      );
       if (parents.length === 0) {
         // No one depends on this package anymore
         this.peerLinks.delete(next.value);
