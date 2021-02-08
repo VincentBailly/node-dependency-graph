@@ -29,8 +29,13 @@ type DependencyGraph = {
 
 export function createDependencyGraph(
   manifests: PackageManifest[],
-  resolutionMap: ResolutionMap
+  resolutionMap: ResolutionMap,
+  failOnMissingPeerDependencies?: boolean
 ): DependencyGraph {
+  if (failOnMissingPeerDependencies === undefined) {
+    failOnMissingPeerDependencies = true;
+  }
+
   const graph = new Graph();
 
   // Adding nodes to the graph
@@ -195,7 +200,11 @@ export function createDependencyGraph(
         if (optional) {
           return undefined;
         } else {
-          throw new Error(`Unmet peer dependency: ${name} in ${parent}`);
+          if (failOnMissingPeerDependencies) {
+            throw new Error(`Unmet peer dependency: ${name} in ${parent}`);
+          } else {
+            console.error(`Unmet peer dependency: ${name} in ${parent}`);
+          }
         }
       }
       const version = graph.reversedNodes.get(result)!.version;

@@ -1146,6 +1146,40 @@ it("fails when peer dependencies are unmet", () => {
   ).toThrow();
 });
 
+it("does not fail when peer dependencies are unmet, when explicitly asked not to", () => {
+  const packageManifests = [
+    {
+      name: "A",
+      version: "1.0.0",
+      isLocal: true,
+      dependencies: {
+        B: "^1.0.0",
+      },
+    },
+    {
+      name: "B",
+      version: "1.1.0",
+      isLocal: false,
+      peerDependencies: {
+        C: "*",
+      },
+    },
+    {
+      name: "C",
+      version: "1.0.1",
+      isLocal: false,
+    },
+  ];
+
+  const resolutionMap = {
+    B: { "^1.0.0": "1.1.0" },
+    C: { "^1.0.0": "1.0.1" },
+  };
+  expect(() =>
+    createDependencyGraph(packageManifests, resolutionMap, false)
+  ).toThrow();
+});
+
 it("emit warning if peerDependency is fulfilled with wrong version", () => {
   let spy: any = {};
 
