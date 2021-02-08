@@ -127,7 +127,14 @@ export function createDependencyGraph(
       // TODO this is impossible, do something about it.
       return;
     }
-    const dependencies = m.peerDependencies;
+    const dependencies = {
+      ...(m.peerDependenciesMeta
+        ? Object.keys(m.peerDependenciesMeta)
+            .map((k) => ({ [k]: "*" }))
+            .reduce((a, c) => ({ ...a, ...c }), {})
+        : {}),
+      ...(m.peerDependencies || {}),
+    };
     if (dependencies) {
       Object.keys(dependencies).forEach((k) => {
         const targetName = k;
