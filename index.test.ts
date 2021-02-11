@@ -1175,9 +1175,7 @@ it("does not fail when peer dependencies are unmet, when explicitly asked not to
     B: { "^1.0.0": "1.1.0" },
     C: { "^1.0.0": "1.0.1" },
   };
-  expect(() =>
     createDependencyGraph(packageManifests, resolutionMap, false)
-  ).toThrow();
 });
 
 it("emit warning if peerDependency is fulfilled with wrong version", () => {
