@@ -166,6 +166,7 @@ export class Graph {
       const parents = Array.from(
         this.reversedLinks.get(next.value)?.keys() || []
       );
+
       if (parents.length === 0) {
         // No one depends on this package anymore
         this.peerLinks.delete(next.value);
@@ -173,31 +174,37 @@ export class Graph {
         continue;
       }
       const ignored = this.ignoredOptionalPeerDependencies;
-      const peerLinks = Array.from(this.peerLinks.get(next.value)!).filter(
-        (o) => {
-          return !ignored.some((i) => {
-            return (
-              i.parentId === parents[0] &&
-              i.sourceId === next.value &&
-              i.requestedName === o.targetName
-            );
-          });
+
+      for (let parent of parents) {
+        for (let peerLink of this.peerLinks.get(next.value)!) {
+          if (
+            ignored.some(
+              (i) =>
+                i.parentId === parent &&
+                i.sourceId === next.value &&
+                i.requestedName === peerLink.targetName
+            )
+          ) {
+            continue;
+          } else {
+            return {
+              parentId: parent,
+              sourceId: next.value,
+              targetName: peerLink.targetName,
+              optional: peerLink.optional,
+              targetRange: peerLink.targetRange,
+            };
+          }
         }
-      );
-      if (peerLinks.length === 0) {
+      }
+
+      
+
         // No one depends on this package anymore
         this.peerLinks.delete(next.value);
         next = packagesWithPeerLinks.next();
         continue;
-      }
-      const first = peerLinks[0];
-      return {
-        parentId: parents[0],
-        sourceId: next.value,
-        targetName: first.targetName,
-        targetRange: first.targetRange,
-        optional: first.optional,
-      };
+
     }
     return undefined;
   }
