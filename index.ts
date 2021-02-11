@@ -181,8 +181,8 @@ export function createDependencyGraph(
           if (!semver.satisfies(version, targetRange)) {
             console.error(`[WARNING] unmatching peer dependency`);
           }
-          // Ignores this peerDependency
-          return undefined;
+          // Install this peerDependency
+          return result;
         }
       }
       const childrenMap = graph.links.get(parent);
