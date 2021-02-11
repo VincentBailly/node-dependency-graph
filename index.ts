@@ -204,6 +204,7 @@ export function createDependencyGraph(
             throw new Error(`Unmet peer dependency: ${name} in ${parent}`);
           } else {
             console.error(`Unmet peer dependency: ${name} in ${parent}`);
+            return undefined;
           }
         }
       }
