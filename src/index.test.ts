@@ -217,6 +217,72 @@ it("resolves optionalDependencies when available", () => {
   expect(graph).toEqual(expected);
 });
 
+it("ignore peer-dependencies of local packages", () => {
+  const packageManifests: PackageManifest[] = [
+    {
+      name: "A",
+      version: "1.0.0",
+      isLocal: true,
+      isRoot: true,
+      peerDependencies: {
+        C: "*",
+      },
+    }
+  ];
+
+  const resolutionMap = {
+  };
+  const graph = createDependencyGraph(packageManifests, resolutionMap);
+  const expected = {
+    nodes: [
+      { id: 0, name: "A", version: "1.0.0" },
+    ],
+    links: [
+    ],
+  };
+
+  expect(graph).toEqual(expected);
+});
+
+
+it("ignore peer-dependencies of non-rooted local packages", () => {
+  const packageManifests: PackageManifest[] = [
+    {
+      name: "A",
+      version: "1.0.0",
+      isLocal: true,
+      isRoot: true,
+      dependencies: {
+        B: "^1.0.0",
+      },
+    },
+    {
+      name: "B",
+      version: "1.0.0",
+      isLocal: true,
+      peerDependencies: {
+        C: "*",
+      },
+    }
+  ];
+
+  const resolutionMap = {
+    B: { "^1.0.0": "1.0.0" },
+    };
+  const graph = createDependencyGraph(packageManifests, resolutionMap);
+  const expected = {
+    nodes: [
+      { id: 0, name: "A", version: "1.0.0" },
+      { id: 1, name: "B", version: "1.0.0" },
+    ],
+    links: [
+      { sourceId: 0, targetId: 1}
+    ],
+  };
+
+  expect(graph).toEqual(expected);
+});
+
 it("ignore self-fulfilled peer-dependencies", () => {
   const packageManifests: PackageManifest[] = [
     {

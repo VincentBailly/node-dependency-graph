@@ -16,6 +16,7 @@ export class Graph {
         id: number;
         peerDeps: { [name: string]: number };
         isRoot: boolean;
+        isLocal: boolean;
       }[];
     };
   };
@@ -26,6 +27,7 @@ export class Graph {
       version: string;
       peerDeps: { [name: string]: number };
       isRoot: boolean;
+      isLocal: boolean;
     }
   >;
   links: Map<number, Map<number, "link">>;
@@ -47,11 +49,11 @@ export class Graph {
     this.peerLinks = new Map();
     this.ignoredOptionalPeerDependencies = [];
   }
-  addNode(name: string, version: string, isRoot: boolean): void {
+  addNode(name: string, version: string, isRoot: boolean, isLocal: boolean): void {
     const id = this.nodeCounter++;
     this.nodes[name] = this.nodes[name] || {};
-    this.nodes[name][version] = [{ id, peerDeps: {}, isRoot }];
-    this.reversedNodes.set(id, { name, version, peerDeps: {}, isRoot });
+    this.nodes[name][version] = [{ id, peerDeps: {}, isRoot, isLocal }];
+    this.reversedNodes.set(id, { name, version, peerDeps: {}, isRoot, isLocal });
   }
 
   createVirtualNode(
@@ -65,6 +67,7 @@ export class Graph {
     const version = oldNode.version;
     const peerDeps = oldNode.peerDeps;
     const isRoot = oldNode.isRoot;
+    const isLocal = oldNode.isLocal;
 
     const matchingNodeWithSamePeerDeps = this.nodes[name][version].filter(
       (o) => {
@@ -96,12 +99,14 @@ export class Graph {
       id: newNodeId,
       peerDeps: { ...peerDeps, [fulfilledPeerDepName]: fulfilledPeerDep },
       isRoot,
+      isLocal
     });
     this.reversedNodes.set(newNodeId, {
       name,
       version,
       peerDeps: { ...peerDeps, [fulfilledPeerDepName]: fulfilledPeerDep },
       isRoot,
+      isLocal
     });
     // 2 duplicating links
     const newLinks = new Map(this.links.get(sourceId)!);
@@ -171,6 +176,11 @@ export class Graph {
     const packagesWithPeerLinks = this.peerLinks.keys();
     let next = packagesWithPeerLinks.next();
     while (!next.done) {
+      // Ignores peer dependencies of root packages
+      if (this.reversedNodes.get(next.value)!.isLocal) {
+        next = packagesWithPeerLinks.next();
+        continue;
+      }
       // TODO: use iterator instead of Array.from
       const parents = Array.from(
         this.reversedLinks.get(next.value)?.keys() || []
