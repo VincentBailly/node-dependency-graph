@@ -5,6 +5,7 @@ export interface PackageManifest {
   name: string;
   version: string;
   isLocal?: boolean;
+  isRoot?: boolean;
   dependencies?: { [name: string]: string };
   devDependencies?: { [name: string]: string };
   optionalDependencies?: { [name: string]: string };

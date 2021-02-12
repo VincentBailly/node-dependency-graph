@@ -1,6 +1,5 @@
 .gitignore
-*.ts
-!*.d.ts
+src/*
 tsconfig.*
 yarn.lock
 jest.config.js

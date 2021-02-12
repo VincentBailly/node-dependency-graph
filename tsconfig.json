@@ -2,8 +2,12 @@
   "compilerOptions": {
     "module": "CommonJS",
     "target": "es2018",
+    "rootDir": "src",
+    "outDir": "lib",
+    "incremental": true,
+    "tsBuildInfoFile": "lib/.tsbuildinfo",
     "declaration": true,
     "strict": true
   },
-  "files": ["index.ts"]
+  "files": ["src/index.ts"]
 }
