@@ -2,10 +2,7 @@ export type NodeId = {
   id: number;
   type: "nodeId";
 };
-type PeerLinkId = {
-  id: number;
-  type: "peerLinkId";
-};
+
 type PeerLink = {
   targetName: string;
   targetRange: string;
@@ -15,12 +12,21 @@ type PeerLink = {
 export class Graph {
   nodes: {
     [name: string]: {
-      [version: string]: { id: number; peerDeps: { [name: string]: number } }[];
+      [version: string]: {
+        id: number;
+        peerDeps: { [name: string]: number };
+        isRoot: boolean;
+      }[];
     };
   };
   reversedNodes: Map<
     number,
-    { name: string; version: string; peerDeps: { [name: string]: number } }
+    {
+      name: string;
+      version: string;
+      peerDeps: { [name: string]: number };
+      isRoot: boolean;
+    }
   >;
   links: Map<number, Map<number, "link">>;
   reversedLinks: Map<number, Map<number, "link">>;
@@ -41,11 +47,11 @@ export class Graph {
     this.peerLinks = new Map();
     this.ignoredOptionalPeerDependencies = [];
   }
-  addNode(name: string, version: string): void {
+  addNode(name: string, version: string, isRoot: boolean): void {
     const id = this.nodeCounter++;
     this.nodes[name] = this.nodes[name] || {};
-    this.nodes[name][version] = [{ id, peerDeps: {} }];
-    this.reversedNodes.set(id, { name, version, peerDeps: {} });
+    this.nodes[name][version] = [{ id, peerDeps: {}, isRoot }];
+    this.reversedNodes.set(id, { name, version, peerDeps: {}, isRoot });
   }
 
   createVirtualNode(
@@ -58,6 +64,7 @@ export class Graph {
     const name = oldNode.name;
     const version = oldNode.version;
     const peerDeps = oldNode.peerDeps;
+    const isRoot = oldNode.isRoot;
 
     const matchingNodeWithSamePeerDeps = this.nodes[name][version].filter(
       (o) => {
@@ -88,11 +95,13 @@ export class Graph {
     this.nodes[name][version].push({
       id: newNodeId,
       peerDeps: { ...peerDeps, [fulfilledPeerDepName]: fulfilledPeerDep },
+      isRoot,
     });
     this.reversedNodes.set(newNodeId, {
       name,
       version,
       peerDeps: { ...peerDeps, [fulfilledPeerDepName]: fulfilledPeerDep },
+      isRoot,
     });
     // 2 duplicating links
     const newLinks = new Map(this.links.get(sourceId)!);
@@ -198,13 +207,10 @@ export class Graph {
         }
       }
 
-      
-
-        // No one depends on this package anymore
-        this.peerLinks.delete(next.value);
-        next = packagesWithPeerLinks.next();
-        continue;
-
+      // No one depends on this package anymore
+      this.peerLinks.delete(next.value);
+      next = packagesWithPeerLinks.next();
+      continue;
     }
     return undefined;
   }
@@ -240,7 +246,17 @@ export class Graph {
     function getReachableNodes(graph: Graph) {
       const reached = new Set();
       // TODO: DANGER: undocumented assumption: the root of the graph is the first node.
-      const waiting = [0];
+      const rootIds: number[] = []
+      for (let name of Object.keys(graph.nodes)) {
+        for (let version of Object.keys(graph.nodes[name])) {
+          for (let node of graph.nodes[name][version]) {
+            if ( node.isRoot) {
+              rootIds.push(node.id);
+            }
+          }
+        }
+      }
+      const waiting = [...rootIds];
       while (waiting.length > 0) {
         const next = waiting.pop();
         if (next === undefined || reached.has(next)) {

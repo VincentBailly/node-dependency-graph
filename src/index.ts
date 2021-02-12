@@ -41,7 +41,7 @@ export function createDependencyGraph(
 
   // Adding nodes to the graph
   manifests.forEach((m) => {
-    graph.addNode(m.name, m.version);
+    graph.addNode(m.name, m.version, m.isRoot || false);
   });
 
   // Adding dependencies to the graph
