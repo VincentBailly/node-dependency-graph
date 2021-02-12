@@ -1,10 +1,21 @@
 import { Graph } from "./graph";
 import * as semver from "semver";
 
+/**
+ * Description of a package.
+ */
 export interface PackageManifest {
   name: string;
   version: string;
+  /**
+   * Local packages are packages which are located in the repository and should not be
+   * copied to another location or duplicated.
+   */
   isLocal?: boolean;
+  /**
+   * Root packages are packages that are the entry points of the dependency graph.
+   * They are the packages that we explicitly want to install.
+   */
   isRoot?: boolean;
   dependencies?: { [name: string]: string };
   devDependencies?: { [name: string]: string };
@@ -41,7 +52,7 @@ export function createDependencyGraph(
 
   // Adding nodes to the graph
   manifests.forEach((m) => {
-    graph.addNode(m.name, m.version, m.isRoot || false);
+    graph.addNode(m.name, m.version, m.isRoot || false, m.isLocal || false);
   });
 
   // Adding dependencies to the graph
