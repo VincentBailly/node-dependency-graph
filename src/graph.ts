@@ -181,7 +181,7 @@ export class Graph {
         next = packagesWithPeerLinks.next();
         continue;
       }
-      // TODO: use iterator instead of Array.from
+
       const parents = Array.from(
         this.reversedLinks.get(next.value)?.keys() || []
       );
@@ -255,7 +255,7 @@ export class Graph {
   } {
     function getReachableNodes(graph: Graph) {
       const reached = new Set();
-      // TODO: DANGER: undocumented assumption: the root of the graph is the first node.
+      
       const rootIds: number[] = []
       for (let name of Object.keys(graph.nodes)) {
         for (let version of Object.keys(graph.nodes[name])) {

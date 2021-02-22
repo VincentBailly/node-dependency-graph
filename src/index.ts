@@ -57,12 +57,8 @@ export function createDependencyGraph(
 
   // Adding dependencies to the graph
   manifests.forEach((m) => {
-    const sourceId = graph.getNodeWithoutPeerDependencies(m.name, m.version);
-    if (!sourceId) {
-      // TODO this is impossible, do something about it.
-      throw new Error("cannot find node");
-      return;
-    }
+    const sourceId = graph.getNodeWithoutPeerDependencies(m.name, m.version)!;
+
     const dependencies = m.dependencies;
     if (dependencies) {
       Object.keys(dependencies).forEach((k) => {
@@ -72,12 +68,7 @@ export function createDependencyGraph(
         const targetId = graph.getNodeWithoutPeerDependencies(
           targetName,
           targetVersion
-        );
-        if (!targetId) {
-          throw new Error("cannot find target");
-          // TODO this is impossible, do something about it.
-          return;
-        }
+        )!;
         graph.addLink(sourceId.id, targetId.id);
       });
     }
@@ -89,11 +80,8 @@ export function createDependencyGraph(
       return;
     }
 
-    const sourceId = graph.getNodeWithoutPeerDependencies(m.name, m.version);
-    if (!sourceId) {
-      // TODO this is impossible, do something about it.
-      return;
-    }
+    const sourceId = graph.getNodeWithoutPeerDependencies(m.name, m.version)!;
+
     const dependencies = m.devDependencies;
     if (dependencies) {
       Object.keys(dependencies).forEach((k) => {
@@ -103,22 +91,15 @@ export function createDependencyGraph(
         const targetId = graph.getNodeWithoutPeerDependencies(
           targetName,
           targetVersion
-        );
-        if (!targetId) {
-          // TODO this is impossible, do something about it.
-          return;
-        }
+        )!;
         graph.addLink(sourceId.id, targetId.id);
       });
     }
   });
 
   manifests.forEach((m) => {
-    const sourceId = graph.getNodeWithoutPeerDependencies(m.name, m.version);
-    if (!sourceId) {
-      // TODO this is impossible, do something about it.
-      return;
-    }
+    const sourceId = graph.getNodeWithoutPeerDependencies(m.name, m.version)!;
+
     const dependencies = m.optionalDependencies;
     if (dependencies) {
       Object.keys(dependencies).forEach((k) => {
@@ -139,11 +120,8 @@ export function createDependencyGraph(
   });
 
   manifests.forEach((m) => {
-    const sourceId = graph.getNodeWithoutPeerDependencies(m.name, m.version);
-    if (!sourceId) {
-      // TODO this is impossible, do something about it.
-      return;
-    }
+    const sourceId = graph.getNodeWithoutPeerDependencies(m.name, m.version)!;
+
     const dependencies = {
       ...(m.peerDependenciesMeta
         ? Object.keys(m.peerDependenciesMeta)
@@ -167,7 +145,6 @@ export function createDependencyGraph(
   });
 
   // Resolve PeerLinks
-  // TODO: fail if peer dependency don't match version range
   let nextPeerDep = graph.getNextPeerLink();
   while (nextPeerDep !== undefined) {
     const {
@@ -197,18 +174,13 @@ export function createDependencyGraph(
           return result;
         }
       }
-      const childrenMap = graph.links.get(parent);
-      if (childrenMap === undefined) {
-        // TODO: this cannot happen, make TS able to understand this.
-        throw new Error();
-      }
+      const childrenMap = graph.links.get(parent)!;
 
       const siblings = Array.from(childrenMap.keys());
       const result = siblings.filter(
         (s) => graph.reversedNodes.get(s)?.name === name
       )[0];
       if (!result) {
-        // TODO: fail for unmet peer dependencies
         if (optional) {
           return undefined;
         } else {
