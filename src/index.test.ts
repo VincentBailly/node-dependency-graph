@@ -5,7 +5,6 @@ it("resolves basic graph", () => {
     {
       name: "A",
       version: "1.0.0",
-      isRoot: true,
       isLocal: true,
       dependencies: {
         B: "^1.0.0",
@@ -53,7 +52,6 @@ it("ignores non-rooted packages", () => {
     {
       name: "A",
       version: "1.0.0",
-      isRoot: true,
       isLocal: true,
       dependencies: {
         B: "^1.0.0",
@@ -97,7 +95,6 @@ it("resolves devDependency of local packages", () => {
     {
       name: "A",
       version: "1.0.0",
-      isRoot: true,
       isLocal: true,
       devDependencies: {
         B: "^1.0.0",
@@ -137,21 +134,22 @@ it("resolves devDependency of local packages", () => {
 });
 
 it("does not resolve devDependency of remote packages", () => {
-  const packageManifests = [
+  const packageManifests: PackageManifest[] = [
     {
       name: "A",
       version: "1.0.0",
-      isLocal: false,
-      isRoot: true,
+      isLocal: true,
       devDependencies: {
         B: "^1.0.0",
-        C: "^1.0.0",
       },
     },
     {
       name: "B",
       version: "1.1.0",
       isLocal: false,
+      devDependencies: {
+        C: "^1.0.0",
+      },
     },
     {
       name: "C",
@@ -166,8 +164,9 @@ it("does not resolve devDependency of remote packages", () => {
   };
   const graph = createDependencyGraph(packageManifests, resolutionMap);
   const expected = {
-    nodes: [{ id: 0, name: "A", version: "1.0.0" }],
-    links: [],
+    nodes: [{ id: 0, name: "A", version: "1.0.0" },
+            { id: 1, name: "B", version: "1.1.0" }],
+    links: [{ sourceId: 0, targetId: 1}],
   };
 
   expect(graph).toEqual(expected);
@@ -178,8 +177,7 @@ it("resolves optionalDependencies when available", () => {
     {
       name: "A",
       version: "1.0.0",
-      isLocal: false,
-      isRoot: true,
+      isLocal: true,
       optionalDependencies: {
         B: "^1.0.0",
         C: "^1.0.0",
@@ -223,7 +221,6 @@ it("ignore peer-dependencies of local packages", () => {
       name: "A",
       version: "1.0.0",
       isLocal: true,
-      isRoot: true,
       peerDependencies: {
         C: "*",
       },
@@ -251,7 +248,6 @@ it("ignore peer-dependencies of non-rooted local packages", () => {
       name: "A",
       version: "1.0.0",
       isLocal: true,
-      isRoot: true,
       dependencies: {
         B: "^1.0.0",
       },
@@ -289,7 +285,6 @@ it("ignore self-fulfilled peer-dependencies", () => {
       name: "A",
       version: "1.0.0",
       isLocal: true,
-      isRoot: true,
       dependencies: {
         B: "^1.0.0",
       },
@@ -337,8 +332,7 @@ it("install peer dependencies even when they don't match", () => {
     {
       name: "A",
       version: "1.0.0",
-      isLocal: false,
-      isRoot: true,
+      isLocal: true,
       dependencies: {
         B: "^1.0.0",
         C: "^1.0.0",
@@ -385,8 +379,7 @@ it("automatically add peerDependencies from peerDependenciesMeta", () => {
     {
       name: "A",
       version: "1.0.0",
-      isLocal: false,
-      isRoot: true,
+      isLocal: true,
       dependencies: {
         B: "^1.0.0",
         C: "^1.0.0",
@@ -434,8 +427,7 @@ it("does not ignore optional peer dependencies when available", () => {
     {
       name: "A",
       version: "1.0.0",
-      isLocal: false,
-      isRoot: true,
+      isLocal: true,
       dependencies: {
         B: "^1.0.0",
         C: "^1.0.0",
@@ -486,8 +478,7 @@ it("ignore optionalDependencies when not available", () => {
     {
       name: "A",
       version: "1.0.0",
-      isLocal: false,
-      isRoot: true,
+      isLocal: true,
       optionalDependencies: {
         B: "^1.0.0",
         C: "^1.0.0",
@@ -514,7 +505,6 @@ it("sorts links", () => {
       name: "A",
       version: "1.0.0",
       isLocal: true,
-      isRoot: true,
       dependencies: {
         C: "^1.0.0",
         B: "^1.0.0",
@@ -558,7 +548,6 @@ it("sorts nodes", () => {
       name: "A",
       version: "1.0.0",
       isLocal: true,
-      isRoot: true,
       dependencies: {
         C: "^1.0.0",
         B: "^1.0.0",
@@ -602,7 +591,6 @@ it("resolves basic peer dependencies", () => {
       name: "A",
       version: "1.0.0",
       isLocal: true,
-      isRoot: true,
       dependencies: {
         B: "^1.0.0",
         C: "^1.0.0",
@@ -650,7 +638,6 @@ it("resolves parent as peer dependencies", () => {
       name: "A",
       version: "1.0.0",
       isLocal: true,
-      isRoot: true,
       dependencies: {
         B: "^1.0.0",
         C: "^1.0.0",
@@ -698,7 +685,6 @@ it("creates virtual packages when needed", () => {
       name: "A",
       version: "1.0.0",
       isLocal: true,
-      isRoot: true,
       dependencies: {
         B: "^1.0.0",
         C: "^1.0.0",
@@ -765,7 +751,6 @@ it("ignore links from unreachable nodes", () => {
       name: "A",
       version: "1.0.0",
       isLocal: true,
-      isRoot: true,
       dependencies: {
         B: "^1.0.0",
         D: "^2.0.0",
@@ -821,7 +806,6 @@ it("dedups virtual packages when it can", () => {
       name: "A",
       version: "1.0.0",
       isLocal: true,
-      isRoot: true,
       dependencies: {
         B: "^1.0.0",
         C: "^1.0.0",
@@ -880,7 +864,6 @@ it("handles circular peer dependencies", () => {
     {
       name: "A",
       version: "1.0.0",
-      isRoot: true,
       isLocal: true,
       dependencies: {
         B: "^1.0.0",
@@ -932,7 +915,6 @@ it("handles packages with two peerDependencies", () => {
       name: "A",
       version: "1.0.0",
       isLocal: true,
-      isRoot: true,
       dependencies: {
         B: "^1.0.0",
         C: "^1.0.0",
@@ -986,7 +968,7 @@ it("resolved a convoluted case with a mix of peerDependencies and circular depen
   const packageManifests: PackageManifest[] = [
     {
       name: "A",
-      isRoot: true,
+      isLocal: true,
       version: "1.0.0",
       dependencies: {
         B: "^1.0.0",
@@ -1069,7 +1051,7 @@ it("resolved a second convoluted case with a mix of peerDependencies and circula
     {
       name: "A",
       version: "1.0.0",
-      isRoot: true,
+      isLocal: true,
       dependencies: {
         B: "^1.0.0",
         C: "^1.0.0",
@@ -1157,7 +1139,6 @@ it("resolves optional peer dependencies", () => {
       name: "A",
       version: "1.0.0",
       isLocal: true,
-      isRoot: true,
       dependencies: {
         B: "^1.0.0",
         C: "^1.0.0",
@@ -1208,7 +1189,6 @@ it("ignores unfulfilled optional peer dependencies", () => {
       name: "A",
       version: "1.0.0",
       isLocal: true,
-      isRoot: true,
       dependencies: {
         B: "^1.0.0",
       },
@@ -1253,7 +1233,6 @@ it("fails when peer dependencies are unmet", () => {
       name: "A",
       version: "1.0.0",
       isLocal: true,
-      isRoot: true,
       dependencies: {
         B: "^1.0.0",
       },
@@ -1288,7 +1267,6 @@ it("does not fail when peer dependencies are unmet, when explicitly asked not to
       name: "A",
       version: "1.0.0",
       isLocal: true,
-      isRoot: true,
       dependencies: {
         B: "^1.0.0",
       },
@@ -1327,7 +1305,6 @@ it("emit warning if peerDependency is fulfilled with wrong version", () => {
       name: "A",
       version: "1.0.0",
       isLocal: true,
-      isRoot: true,
       dependencies: {
         B: "^1.0.0",
         C: "^1.0.0",

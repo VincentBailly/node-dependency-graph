@@ -15,7 +15,6 @@ export class Graph {
       [version: string]: {
         id: number;
         peerDeps: { [name: string]: number };
-        isRoot: boolean;
         isLocal: boolean;
       }[];
     };
@@ -26,7 +25,6 @@ export class Graph {
       name: string;
       version: string;
       peerDeps: { [name: string]: number };
-      isRoot: boolean;
       isLocal: boolean;
     }
   >;
@@ -49,11 +47,11 @@ export class Graph {
     this.peerLinks = new Map();
     this.ignoredOptionalPeerDependencies = [];
   }
-  addNode(name: string, version: string, isRoot: boolean, isLocal: boolean): void {
+  addNode(name: string, version: string, isLocal: boolean): void {
     const id = this.nodeCounter++;
     this.nodes[name] = this.nodes[name] || {};
-    this.nodes[name][version] = [{ id, peerDeps: {}, isRoot, isLocal }];
-    this.reversedNodes.set(id, { name, version, peerDeps: {}, isRoot, isLocal });
+    this.nodes[name][version] = [{ id, peerDeps: {}, isLocal }];
+    this.reversedNodes.set(id, { name, version, peerDeps: {}, isLocal });
   }
 
   createVirtualNode(
@@ -66,7 +64,6 @@ export class Graph {
     const name = oldNode.name;
     const version = oldNode.version;
     const peerDeps = oldNode.peerDeps;
-    const isRoot = oldNode.isRoot;
     const isLocal = oldNode.isLocal;
 
     const matchingNodeWithSamePeerDeps = this.nodes[name][version].filter(
@@ -98,14 +95,12 @@ export class Graph {
     this.nodes[name][version].push({
       id: newNodeId,
       peerDeps: { ...peerDeps, [fulfilledPeerDepName]: fulfilledPeerDep },
-      isRoot,
       isLocal
     });
     this.reversedNodes.set(newNodeId, {
       name,
       version,
       peerDeps: { ...peerDeps, [fulfilledPeerDepName]: fulfilledPeerDep },
-      isRoot,
       isLocal
     });
     // 2 duplicating links
@@ -260,7 +255,7 @@ export class Graph {
       for (let name of Object.keys(graph.nodes)) {
         for (let version of Object.keys(graph.nodes[name])) {
           for (let node of graph.nodes[name][version]) {
-            if ( node.isRoot) {
+            if ( node.isLocal) {
               rootIds.push(node.id);
             }
           }

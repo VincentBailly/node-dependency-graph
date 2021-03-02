@@ -12,11 +12,6 @@ export interface PackageManifest {
    * copied to another location or duplicated.
    */
   isLocal?: boolean;
-  /**
-   * Root packages are packages that are the entry points of the dependency graph.
-   * They are the packages that we explicitly want to install.
-   */
-  isRoot?: boolean;
   dependencies?: { [name: string]: string };
   devDependencies?: { [name: string]: string };
   optionalDependencies?: { [name: string]: string };
@@ -52,7 +47,7 @@ export function createDependencyGraph(
 
   // Adding nodes to the graph
   manifests.forEach((m) => {
-    graph.addNode(m.name, m.version, m.isRoot || false, m.isLocal || false);
+    graph.addNode(m.name, m.version, m.isLocal || false);
   });
 
   // Adding dependencies to the graph
