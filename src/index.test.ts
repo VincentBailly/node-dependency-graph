@@ -327,8 +327,73 @@ it("ignore self-fulfilled peer-dependencies", () => {
   expect(graph).toEqual(expected);
 });
 
+it.only("propagates peer dependencies even regardless of input order", () => {
+  debugger
+  const packageManifests: PackageManifest[] = [
+    {
+      name: "A",
+      version: "1.0.0",
+      isLocal: true,
+      dependencies: {
+        D: "^1.0.0",
+        C: "^1.0.0"
+      },
+    },
+    {
+      name: "C",
+      version: "1.0.1",
+      isLocal: false,
+    },
+    {
+      name: "B",
+      version: "1.1.0",
+      isLocal: false,
+      peerDependencies: {
+        C: "1.0.0"
+      },
+      
+    },
+    {
+      name: "D",
+      version: "1.0.0",
+      isLocal: false,
+      peerDependencies: {
+        C: "1.0.0"
+      },
+      dependencies: {
+        B: "^1.0.0"
+      }
+    }
+  ];
+
+  const resolutionMap = {
+    A: { "^1.0.0": "1.0.0" },
+    B: { "^1.0.0": "1.1.0" },
+    C: { "^1.0.0": "1.0.1" },
+    D: { "^1.0.0": "1.0.0" },
+  };
+  // TODO: make it so we don't need to pass false as the third argument
+  const graph = createDependencyGraph(packageManifests, resolutionMap, false);
+  const expected = {
+    nodes: [
+      { id: 0, name: "A", version: "1.0.0" },
+      { id: 1, name: "B", version: "1.1.0" },
+      { id: 2, name: "C", version: "1.0.1" },
+      { id: 3, name: "D", version: "1.0.0" },
+    ],
+    links: [
+      { sourceId: 0, targetId: 2 },
+      { sourceId: 0, targetId: 3 },
+      { sourceId: 1, targetId: 2 },
+      { sourceId: 3, targetId: 1 },
+      { sourceId: 3, targetId: 2 },
+    ],
+  };
+
+  expect(graph).toEqual(expected);
+});
 it("install peer dependencies even when they don't match", () => {
-  const packageManifests = [
+  const packageManifests: PackageManifest[] = [
     {
       name: "A",
       version: "1.0.0",
