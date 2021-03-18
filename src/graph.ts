@@ -32,11 +32,6 @@ export class Graph {
   reversedLinks: Map<number, Map<number, "link">>;
   nodeCounter: number;
   peerLinks: Map<number, PeerLink[]>;
-  ignoredOptionalPeerDependencies: {
-    parentId: number;
-    sourceId: number;
-    requestedName: string;
-  }[];
 
   constructor() {
     this.nodes = {};
@@ -45,7 +40,6 @@ export class Graph {
     this.reversedLinks = new Map();
     this.nodeCounter = 0;
     this.peerLinks = new Map();
-    this.ignoredOptionalPeerDependencies = [];
   }
   addNode(name: string, version: string, isLocal: boolean): void {
     const id = this.nodeCounter++;
@@ -54,17 +48,17 @@ export class Graph {
     this.reversedNodes.set(id, { name, version, peerDeps: {}, isLocal });
   }
 
-  createVirtualNode(
+
+  getVirtualNode(
     sourceId: number,
     fulfilledPeerDepName: string,
     fulfilledPeerDep: number
-  ): number {
+  ): number | undefined {
     const oldNode = this.reversedNodes.get(sourceId)!;
 
     const name = oldNode.name;
     const version = oldNode.version;
     const peerDeps = oldNode.peerDeps;
-    const isLocal = oldNode.isLocal;
 
     const matchingNodeWithSamePeerDeps = this.nodes[name][version].filter(
       (o) => {
@@ -89,6 +83,21 @@ export class Graph {
     if (matchingNodeWithSamePeerDeps !== undefined) {
       return matchingNodeWithSamePeerDeps.id;
     }
+    return undefined;
+
+  }
+
+  createVirtualNode(
+    sourceId: number,
+    fulfilledPeerDepName: string,
+    fulfilledPeerDep: number
+  ): number {
+    const oldNode = this.reversedNodes.get(sourceId)!;
+
+    const name = oldNode.name;
+    const version = oldNode.version;
+    const peerDeps = oldNode.peerDeps;
+    const isLocal = oldNode.isLocal;
 
     const newNodeId = this.nodeCounter++;
     // 1 creating the node
@@ -159,15 +168,18 @@ export class Graph {
     return { id, type: "nodeId" };
   }
 
-  getNextPeerLink():
-    | undefined
-    | {
+  hasPeerLink(nodeId: number): boolean {
+    return this.peerLinks.has(nodeId) && this.peerLinks.get(nodeId)!.length !== 0;
+  }
+
+  getPeerLinks(): {
         parentId: number;
         sourceId: number;
         targetName: string;
         targetRange: string;
         optional: boolean;
-      } {
+      }[] {
+    const result = []
     const packagesWithPeerLinks = this.peerLinks.keys();
     let next = packagesWithPeerLinks.next();
     while (!next.done) {
@@ -181,43 +193,21 @@ export class Graph {
         this.reversedLinks.get(next.value)?.keys() || []
       );
 
-      if (parents.length === 0) {
-        // No one depends on this package anymore
-        this.peerLinks.delete(next.value);
-        next = packagesWithPeerLinks.next();
-        continue;
-      }
-      const ignored = this.ignoredOptionalPeerDependencies;
-
       for (let parent of parents) {
         for (let peerLink of this.peerLinks.get(next.value)!) {
-          if (
-            ignored.some(
-              (i) =>
-                i.parentId === parent &&
-                i.sourceId === next.value &&
-                i.requestedName === peerLink.targetName
-            )
-          ) {
-            continue;
-          } else {
-            return {
+            result.push({
               parentId: parent,
               sourceId: next.value,
               targetName: peerLink.targetName,
               optional: peerLink.optional,
               targetRange: peerLink.targetRange,
-            };
-          }
+            });
         }
       }
 
-      // No one depends on this package anymore
-      this.peerLinks.delete(next.value);
       next = packagesWithPeerLinks.next();
-      continue;
     }
-    return undefined;
+    return result;
   }
 
   addPeerLink(
@@ -255,7 +245,7 @@ export class Graph {
       for (let name of Object.keys(graph.nodes)) {
         for (let version of Object.keys(graph.nodes[name])) {
           for (let node of graph.nodes[name][version]) {
-            if ( node.isLocal) {
+            if (node.isLocal) {
               rootIds.push(node.id);
             }
           }

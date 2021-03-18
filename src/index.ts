@@ -139,80 +139,112 @@ export function createDependencyGraph(
     }
   });
 
-  // Resolve PeerLinks
-  let nextPeerDep = graph.getNextPeerLink();
-  while (nextPeerDep !== undefined) {
+  // Resolve PeerLinks  
+  let peerDeps = graph.getPeerLinks();
+  let watchDog = peerDeps.length + 1;
+  while (peerDeps.length !== 0) {
+    // Stop the loop when the number of elements in the queue are stable
+      if (watchDog === 0) {
+        break;
+      }
+    const peerDep = peerDeps.shift()!;
     const {
       parentId,
       sourceId,
       targetName,
       optional,
       targetRange,
-    } = nextPeerDep;
+    } = peerDep;
     function resolveChild(
       parent: number,
       name: string,
       optional: boolean
-    ): number | undefined {
-      const directChildrenMap = graph.links.get(sourceId);
-      if (directChildrenMap) {
-        const children = Array.from(directChildrenMap.keys());
-        const result = children.filter(
+    ): number | "failed" | "ignored" | "retryLater" {
+      const children = Array.from(graph.links.get(sourceId)?.keys() || []);
+      if (children.some(
           (s) => graph.reversedNodes.get(s)?.name === name
-        )[0];
-        if (result) {
-          const version = graph.reversedNodes.get(result)!.version;
-          if (!semver.satisfies(version, targetRange)) {
-            console.error(`[WARNING] unmatching peer dependency`);
-          }
-          // Install this peerDependency
-          return result;
-        }
-      }
-      const childrenMap = graph.links.get(parent)!;
+      )) {
+        watchDog = peerDeps.length + 1; 
+        return "ignored";
+       }
 
-      const siblings = Array.from(childrenMap.keys());
-      const result = siblings.filter(
-        (s) => graph.reversedNodes.get(s)?.name === name
+      const siblings = Array.from(graph.links.get(parentId)?.keys() || []);
+      const candidates = siblings.concat([parentId]);
+      const result = candidates.filter(
+          (s) => graph.reversedNodes.get(s)?.name === name
       )[0];
-      if (!result) {
+      if (result !== undefined) {
+          const version = graph.reversedNodes.get(result)!.version;
+        if (!semver.satisfies(version, targetRange)) {
+            console.error(`[WARNING] unmatching peer dependency`);
+        }
+        // Install this peerDependency
+        watchDog = peerDeps.length + 1; 
+        return result;
+      } else {
         if (optional) {
-          return undefined;
+          watchDog = peerDeps.length + 1; 
+          return "ignored";
         } else {
-          if (failOnMissingPeerDependencies) {
-            throw new Error(`Unmet peer dependency: ${name} in ${parent}`);
+          if (graph.hasPeerLink(parent)) {
+            watchDog--;
+            return "retryLater";
           } else {
-            console.error(`Unmet peer dependency: ${name} in ${parent}`);
-            return undefined;
+            if (failOnMissingPeerDependencies) {
+              throw new Error(`Unmet peer dependency: ${name} in ${parent}`);
+            } else {
+              console.error(`Unmet peer dependency: ${name} in ${parent}`);
+              watchDog = peerDeps.length + 1; 
+              return "failed";
+            }
           }
         }
       }
-      const version = graph.reversedNodes.get(result)!.version;
-      if (!semver.satisfies(version, targetRange)) {
-        console.error(`[WARNING] unmatching peer dependency`);
-      }
-      return result;
     }
     const result =
-      graph.reversedNodes.get(parentId)?.name === targetName
-        ? parentId
-        : resolveChild(parentId, targetName, optional);
-    if (result !== undefined) {
-      const newPackageId = graph.createVirtualNode(
+        resolveChild(parentId, targetName, optional);
+    if (typeof result === "number") {
+      const existingVirtualNode = graph.getVirtualNode(
         sourceId,
         targetName,
         result
       );
-      graph.changeChildren(parentId, sourceId, newPackageId);
-    } else {
-      graph.ignoredOptionalPeerDependencies.push({
-        parentId,
-        sourceId,
-        requestedName: targetName,
-      });
+      if (existingVirtualNode !== undefined) {
+        graph.changeChildren(parentId, sourceId, existingVirtualNode);
+      } else {
+        const newPackageId = graph.createVirtualNode(
+          sourceId,
+          targetName,
+          result
+        );
+        const newPeerLinks = graph.peerLinks.get(newPackageId) || [];
+        for (const newPeerLink of newPeerLinks) {
+          peerDeps.push({
+            parentId,
+            sourceId: newPackageId,
+            targetName: newPeerLink.targetName,
+            targetRange: newPeerLink.targetRange,
+            optional: newPeerLink.optional,
+          });
+        }
+        const children = Array.from(graph.links.get(newPackageId)?.keys() || []);
+        for(const child of children) {
+          const childPeerLinks = graph.peerLinks.get(child) || [];
+          for (const childPeerLink of childPeerLinks) {
+            peerDeps.push({
+              parentId: newPackageId,
+              sourceId: child,
+              targetName: childPeerLink.targetName,
+              targetRange: childPeerLink.targetRange,
+              optional: childPeerLink.optional
+            })
+          }
+        }
+        graph.changeChildren(parentId, sourceId, newPackageId);
+      }
+    } else if (result === "retryLater") {
+      peerDeps.push(peerDep)
     }
-
-    nextPeerDep = graph.getNextPeerLink();
   }
 
   return graph.toJson();
