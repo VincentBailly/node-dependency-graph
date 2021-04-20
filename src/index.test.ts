@@ -47,7 +47,7 @@ it("ignores non-rooted packages", () => {
   const packageManifests: PackageManifest[] = [
     {
       name: "foo",
-      version: "1.0.0"
+      version: "1.0.0",
     },
     {
       name: "A",
@@ -164,9 +164,11 @@ it("does not resolve devDependency of remote packages", () => {
   };
   const graph = createDependencyGraph(packageManifests, resolutionMap);
   const expected = {
-    nodes: [{ id: 0, name: "A", version: "1.0.0" },
-            { id: 1, name: "B", version: "1.1.0" }],
-    links: [{ sourceId: 0, targetId: 1}],
+    nodes: [
+      { id: 0, name: "A", version: "1.0.0" },
+      { id: 1, name: "B", version: "1.1.0" },
+    ],
+    links: [{ sourceId: 0, targetId: 1 }],
   };
 
   expect(graph).toEqual(expected);
@@ -224,23 +226,18 @@ it("ignore peer-dependencies of local packages", () => {
       peerDependencies: {
         C: "*",
       },
-    }
+    },
   ];
 
-  const resolutionMap = {
-  };
+  const resolutionMap = {};
   const graph = createDependencyGraph(packageManifests, resolutionMap);
   const expected = {
-    nodes: [
-      { id: 0, name: "A", version: "1.0.0" },
-    ],
-    links: [
-    ],
+    nodes: [{ id: 0, name: "A", version: "1.0.0" }],
+    links: [],
   };
 
   expect(graph).toEqual(expected);
 });
-
 
 it("ignore peer-dependencies of non-rooted local packages", () => {
   const packageManifests: PackageManifest[] = [
@@ -259,21 +256,19 @@ it("ignore peer-dependencies of non-rooted local packages", () => {
       peerDependencies: {
         C: "*",
       },
-    }
+    },
   ];
 
   const resolutionMap = {
     B: { "^1.0.0": "1.0.0" },
-    };
+  };
   const graph = createDependencyGraph(packageManifests, resolutionMap);
   const expected = {
     nodes: [
       { id: 0, name: "A", version: "1.0.0" },
       { id: 1, name: "B", version: "1.0.0" },
     ],
-    links: [
-      { sourceId: 0, targetId: 1}
-    ],
+    links: [{ sourceId: 0, targetId: 1 }],
   };
 
   expect(graph).toEqual(expected);
@@ -335,7 +330,7 @@ it("propagates peer dependencies even regardless of input order", () => {
       isLocal: true,
       dependencies: {
         D: "^1.0.0",
-        C: "^1.0.0"
+        C: "^1.0.0",
       },
     },
     {
@@ -348,21 +343,20 @@ it("propagates peer dependencies even regardless of input order", () => {
       version: "1.1.0",
       isLocal: false,
       peerDependencies: {
-        C: "1.0.0"
+        C: "1.0.0",
       },
-      
     },
     {
       name: "D",
       version: "1.0.0",
       isLocal: false,
       peerDependencies: {
-        C: "1.0.0"
+        C: "1.0.0",
       },
       dependencies: {
-        B: "^1.0.0"
-      }
-    }
+        B: "^1.0.0",
+      },
+    },
   ];
 
   const resolutionMap = {
@@ -479,6 +473,64 @@ it("automatically add peerDependencies from peerDependenciesMeta", () => {
       { sourceId: 0, targetId: 1 },
       { sourceId: 0, targetId: 2 },
       { sourceId: 1, targetId: 2 },
+    ],
+  };
+
+  expect(graph).toEqual(expected);
+});
+it("properly installs package with two peer dependencies", () => {
+  const packageManifests = [
+    {
+      name: "A",
+      version: "1.0.0",
+      isLocal: true,
+      dependencies: {
+        B: "^1.0.0",
+        C: "^1.0.0",
+        D: "^1.0.0",
+      },
+    },
+    {
+      name: "B",
+      version: "1.1.0",
+      isLocal: false,
+      peerDependencies: {
+        C: "^1.0.0",
+        D: "^1.0.0",
+      },
+    },
+    {
+      name: "C",
+      version: "1.0.1",
+      isLocal: false,
+    },
+    {
+      name: "D",
+      version: "1.0.1",
+      isLocal: false,
+    },
+  ];
+
+  const resolutionMap = {
+    A: { "^1.0.0": "1.0.0" },
+    B: { "^1.0.0": "1.1.0" },
+    C: { "^1.0.0": "1.0.1" },
+    D: { "^1.0.0": "1.0.1" },
+  };
+  const graph = createDependencyGraph(packageManifests, resolutionMap);
+  const expected = {
+    nodes: [
+      { id: 0, name: "A", version: "1.0.0" },
+      { id: 1, name: "B", version: "1.1.0" },
+      { id: 2, name: "C", version: "1.0.1" },
+      { id: 3, name: "D", version: "1.0.1" },
+    ],
+    links: [
+      { sourceId: 0, targetId: 1 },
+      { sourceId: 0, targetId: 2 },
+      { sourceId: 0, targetId: 3 },
+      { sourceId: 1, targetId: 2 },
+      { sourceId: 1, targetId: 3 },
     ],
   };
 
@@ -1083,7 +1135,7 @@ it("resolved a convoluted case with a mix of peerDependencies and circular depen
   const graph = createDependencyGraph(packageManifests, resolutionMap);
   const expected = {
     nodes: [
-      { id: 0, name: "A", version: "1.0.0"},
+      { id: 0, name: "A", version: "1.0.0" },
       { id: 1, name: "B", version: "1.0.0" },
       { id: 2, name: "B", version: "1.0.0" },
       { id: 3, name: "C", version: "1.0.0" },
@@ -1190,6 +1242,73 @@ it("resolved a second convoluted case with a mix of peerDependencies and circula
       { sourceId: 5, targetId: 6 },
       { sourceId: 6, targetId: 2 },
       { sourceId: 6, targetId: 4 },
+    ],
+  };
+
+  expect(graph).toEqual(expected);
+});
+
+it("resolved a third convoluted case with a mix of peerDependencies and circular dependencies", () => {
+  const packageManifests: PackageManifest[] = [
+    {
+      name: "A",
+      version: "1.0.0",
+      isLocal: true,
+      dependencies: {
+        B: "^1.0.0",
+        C: "^1.0.0",
+        D: "^1.0.0",
+        E: "^1.0.0",
+      },
+    },
+    {
+      name: "B",
+      version: "1.0.0",
+    },
+    {
+      name: "C",
+      version: "1.0.0",
+      peerDependencies: {
+        B: "*",
+        D: "*",
+      },
+    },
+    {
+      name: "D",
+      version: "1.0.0",
+      peerDependencies: {
+        E: "^1.0.0",
+      },
+    },
+    {
+      name: "E",
+      version: "1.0.0",
+    },
+  ];
+
+  const resolutionMap = {
+    B: { "^1.0.0": "1.0.0" },
+    C: { "^1.0.0": "1.0.0" },
+    D: { "^1.0.0": "1.0.0" },
+    E: { "^1.0.0": "1.0.0" },
+  };
+  const graph = createDependencyGraph(packageManifests, resolutionMap);
+  const expected = {
+    nodes: [
+      { id: 0, name: "A", version: "1.0.0" },
+      { id: 1, name: "B", version: "1.0.0" },
+      { id: 2, name: "C", version: "1.0.0" },
+      { id: 3, name: "D", version: "1.0.0" },
+      { id: 4, name: "E", version: "1.0.0" },
+    ],
+    links: [
+      { sourceId: 0, targetId: 1 },
+      { sourceId: 0, targetId: 2 },
+      { sourceId: 0, targetId: 3 },
+      { sourceId: 0, targetId: 4 },
+      { sourceId: 2, targetId: 1 },
+      { sourceId: 2, targetId: 3 },
+      { sourceId: 3, targetId: 4 },
     ],
   };
 
@@ -1353,7 +1472,7 @@ it("does not fail when peer dependencies are unmet, when explicitly asked not to
     B: { "^1.0.0": "1.1.0" },
     C: { "^1.0.0": "1.0.1" },
   };
-    createDependencyGraph(packageManifests, resolutionMap, false)
+  createDependencyGraph(packageManifests, resolutionMap, false);
 });
 
 it("emit warning if peerDependency is fulfilled with wrong version", () => {
