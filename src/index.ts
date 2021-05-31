@@ -164,7 +164,6 @@ export function createDependencyGraph(
     ): number | "failed" | "ignored" | "retryLater" {
       const children = Array.from(graph.links.get(sourceId)?.keys() || []);
       if (children.some((s) => graph.reversedNodes.get(s)?.name === name)) {
-        watchDog = peerDeps.length + 1;
         return "ignored";
       }
 
@@ -179,22 +178,18 @@ export function createDependencyGraph(
           console.error(`[WARNING] unmatching peer dependency`);
         }
         // Install this peerDependency
-        watchDog = peerDeps.length + 1;
         return result;
       } else {
         if (optional) {
-          watchDog = peerDeps.length + 1;
           return "ignored";
         } else {
           if (graph.hasPeerLink(parent)) {
-            watchDog--;
             return "retryLater";
           } else {
             if (failOnMissingPeerDependencies) {
               throw new Error(`Unmet peer dependency: ${name} in ${parent}`);
             } else {
               console.error(`Unmet peer dependency: ${name} in ${parent}`);
-              watchDog = peerDeps.length + 1;
               return "failed";
             }
           }
@@ -209,7 +204,19 @@ export function createDependencyGraph(
         result
       );
       if (existingVirtualNode !== undefined) {
+        const newPeerLinks = graph.peerLinks.get(existingVirtualNode) || [];
+        for (const newPeerLink of newPeerLinks) {
+          peerDeps.push({
+            parentId,
+            sourceId: existingVirtualNode,
+            targetName: newPeerLink.targetName,
+            targetRange: newPeerLink.targetRange,
+            optional: newPeerLink.optional,
+          });
+        }
         graph.changeChildren(parentId, sourceId, existingVirtualNode);
+        
+        watchDog = peerDeps.length + 1;
       } else {
         const newPackageId = graph.createVirtualNode(
           sourceId,
@@ -243,9 +250,11 @@ export function createDependencyGraph(
           }
         }
         graph.changeChildren(parentId, sourceId, newPackageId);
+        watchDog = peerDeps.length + 1;
       }
     } else if (result === "retryLater") {
       peerDeps.push(peerDep);
+      watchDog--;
     }
   }
 
