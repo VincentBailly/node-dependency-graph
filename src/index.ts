@@ -175,7 +175,11 @@ export function createDependencyGraph(
       if (result !== undefined) {
         const version = graph.reversedNodes.get(result)!.version;
         if (!semver.satisfies(version, targetRange)) {
-          console.error(`[WARNING] unmatching peer dependency`);
+          const parentName = graph.reversedNodes.get(parentId)!.name;
+          const parentVersion = graph.reversedNodes.get(parentId)!.version;
+          const sourceName = graph.reversedNodes.get(sourceId)!.name;
+          const sourceVersion = graph.reversedNodes.get(sourceId)!.version;
+          console.error(`[WARNING] unmatching peer dependency, ${name} in ${sourceName}@${sourceVersion} (parent: ${parentName}@${parentVersion}) was resolved to version ${version} which does not satisfy the given range: ${targetRange}`);
         }
         // Install this peerDependency
         return result;
@@ -186,10 +190,14 @@ export function createDependencyGraph(
           if (graph.hasPeerLink(parent)) {
             return "retryLater";
           } else {
+            const parentName = graph.reversedNodes.get(parentId)!.name;
+            const parentVersion = graph.reversedNodes.get(parentId)!.version;
+            const sourceName = graph.reversedNodes.get(sourceId)!.name;
+            const sourceVersion = graph.reversedNodes.get(sourceId)!.version;
             if (failOnMissingPeerDependencies) {
-              throw new Error(`Unmet peer dependency: ${name} in ${parent}`);
+              throw new Error(`[ERROR] Unmet peer dependency: ${name} in ${sourceName}@${sourceVersion} (parent: ${parentName}@${parentVersion})`);
             } else {
-              console.error(`Unmet peer dependency: ${name} in ${parent}`);
+              console.error(`[WARNING] Unmet peer dependency: ${name} in ${sourceName}@${sourceVersion} (parent: ${parentName}@${parentVersion})`);
               return "failed";
             }
           }
