@@ -205,6 +205,7 @@ export function createDependencyGraph(
       );
       if (existingVirtualNode !== undefined) {
         const newPeerLinks = graph.peerLinks.get(existingVirtualNode) || [];
+
         for (const newPeerLink of newPeerLinks) {
           peerDeps.push({
             parentId,
@@ -215,7 +216,7 @@ export function createDependencyGraph(
           });
         }
         graph.changeChildren(parentId, sourceId, existingVirtualNode);
-        
+
         watchDog = peerDeps.length + 1;
       } else {
         const newPackageId = graph.createVirtualNode(

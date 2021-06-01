@@ -537,6 +537,80 @@ it("properly installs package with two peer dependencies", () => {
   expect(graph).toEqual(expected);
 });
 
+it("properly installs package with two peer dependencies and two parents", () => {
+  const packageManifests = [
+    {
+      name: "A",
+      version: "1.0.0",
+      isLocal: true,
+      dependencies: {
+        B: "^1.0.0",
+        C: "^1.0.0",
+        D: "^1.0.0",
+      },
+    },
+    {
+      name: "AA",
+      version: "1.0.0",
+      isLocal: true,
+      dependencies: {
+        B: "^1.0.0",
+        C: "^1.0.0",
+        D: "^1.0.0",
+      },
+    },
+    {
+      name: "B",
+      version: "1.1.0",
+      isLocal: false,
+      peerDependencies: {
+        C: "^1.0.0",
+        D: "^1.0.0",
+      },
+    },
+    {
+      name: "C",
+      version: "1.0.1",
+      isLocal: false,
+    },
+    {
+      name: "D",
+      version: "1.0.1",
+      isLocal: false,
+    },
+  ];
+
+  const resolutionMap = {
+    A: { "^1.0.0": "1.0.0" },
+    AA: { "^1.0.0": "1.0.0" },
+    B: { "^1.0.0": "1.1.0" },
+    C: { "^1.0.0": "1.0.1" },
+    D: { "^1.0.0": "1.0.1" },
+  };
+  const graph = createDependencyGraph(packageManifests, resolutionMap);
+  const expected = {
+    nodes: [
+      { id: 0, name: "A", version: "1.0.0" },
+      { id: 1, name: "AA", version: "1.0.0" },
+      { id: 2, name: "B", version: "1.1.0" },
+      { id: 3, name: "C", version: "1.0.1" },
+      { id: 4, name: "D", version: "1.0.1" },
+    ],
+    links: [
+      { sourceId: 0, targetId: 2 },
+      { sourceId: 0, targetId: 3 },
+      { sourceId: 0, targetId: 4 },
+      { sourceId: 1, targetId: 2 },
+      { sourceId: 1, targetId: 3 },
+      { sourceId: 1, targetId: 4 },
+      { sourceId: 2, targetId: 3 },
+      { sourceId: 2, targetId: 4 },
+    ],
+  };
+
+  expect(graph).toEqual(expected);
+});
+
 it("does not ignore optional peer dependencies when available", () => {
   const packageManifests = [
     {
