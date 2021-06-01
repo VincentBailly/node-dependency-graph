@@ -48,7 +48,6 @@ export class Graph {
     this.reversedNodes.set(id, { name, version, peerDeps: {}, isLocal });
   }
 
-
   getVirtualNode(
     sourceId: number,
     fulfilledPeerDepName: string,
@@ -84,7 +83,6 @@ export class Graph {
       return matchingNodeWithSamePeerDeps.id;
     }
     return undefined;
-
   }
 
   createVirtualNode(
@@ -104,13 +102,13 @@ export class Graph {
     this.nodes[name][version].push({
       id: newNodeId,
       peerDeps: { ...peerDeps, [fulfilledPeerDepName]: fulfilledPeerDep },
-      isLocal
+      isLocal,
     });
     this.reversedNodes.set(newNodeId, {
       name,
       version,
       peerDeps: { ...peerDeps, [fulfilledPeerDepName]: fulfilledPeerDep },
-      isLocal
+      isLocal,
     });
     // 2 duplicating links
     const newLinks = new Map(this.links.get(sourceId)!);
@@ -169,17 +167,19 @@ export class Graph {
   }
 
   hasPeerLink(nodeId: number): boolean {
-    return this.peerLinks.has(nodeId) && this.peerLinks.get(nodeId)!.length !== 0;
+    return (
+      this.peerLinks.has(nodeId) && this.peerLinks.get(nodeId)!.length !== 0
+    );
   }
 
   getPeerLinks(): {
-        parentId: number;
-        sourceId: number;
-        targetName: string;
-        targetRange: string;
-        optional: boolean;
-      }[] {
-    const result = []
+    parentId: number;
+    sourceId: number;
+    targetName: string;
+    targetRange: string;
+    optional: boolean;
+  }[] {
+    const result = [];
     const packagesWithPeerLinks = this.peerLinks.keys();
     let next = packagesWithPeerLinks.next();
     while (!next.done) {
@@ -195,13 +195,13 @@ export class Graph {
 
       for (let parent of parents) {
         for (let peerLink of this.peerLinks.get(next.value)!) {
-            result.push({
-              parentId: parent,
-              sourceId: next.value,
-              targetName: peerLink.targetName,
-              optional: peerLink.optional,
-              targetRange: peerLink.targetRange,
-            });
+          result.push({
+            parentId: parent,
+            sourceId: next.value,
+            targetName: peerLink.targetName,
+            optional: peerLink.optional,
+            targetRange: peerLink.targetRange,
+          });
         }
       }
 
@@ -240,8 +240,8 @@ export class Graph {
   } {
     function getReachableNodes(graph: Graph) {
       const reached = new Set();
-      
-      const rootIds: number[] = []
+
+      const rootIds: number[] = [];
       for (let name of Object.keys(graph.nodes)) {
         for (let version of Object.keys(graph.nodes[name])) {
           for (let node of graph.nodes[name][version]) {

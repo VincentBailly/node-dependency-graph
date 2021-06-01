@@ -139,70 +139,64 @@ export function createDependencyGraph(
     }
   });
 
-  // Resolve PeerLinks  
+  // Resolve PeerLinks
   let peerDeps = graph.getPeerLinks();
   let watchDog = peerDeps.length + 1;
   while (peerDeps.length !== 0) {
     // Stop the loop when the number of elements in the queue are stable
-      if (watchDog === 0) {
-        break;
-      }
+    if (watchDog === 0) {
+      break;
+    }
+
     const peerDep = peerDeps.shift()!;
-    const {
-      parentId,
-      sourceId,
-      targetName,
-      optional,
-      targetRange,
-    } = peerDep;
+    const { parentId, sourceId, targetName, optional, targetRange } = peerDep;
+    if (
+      !graph.links.get(parentId) ||
+      !graph.links.get(parentId)!.has(sourceId)
+    ) {
+      watchDog = peerDeps.length + 1;
+      continue;
+    }
     function resolveChild(
       parent: number,
       name: string,
       optional: boolean
     ): number | "failed" | "ignored" | "retryLater" {
       const children = Array.from(graph.links.get(sourceId)?.keys() || []);
-      if (children.some(
-          (s) => graph.reversedNodes.get(s)?.name === name
-      )) {
-        watchDog = peerDeps.length + 1; 
+      if (children.some((s) => graph.reversedNodes.get(s)?.name === name)) {
         return "ignored";
-       }
+      }
 
       const siblings = Array.from(graph.links.get(parentId)?.keys() || []);
       const candidates = siblings.concat([parentId]);
       const result = candidates.filter(
-          (s) => graph.reversedNodes.get(s)?.name === name
+        (s) => graph.reversedNodes.get(s)?.name === name
       )[0];
       if (result !== undefined) {
-          const version = graph.reversedNodes.get(result)!.version;
+        const version = graph.reversedNodes.get(result)!.version;
         if (!semver.satisfies(version, targetRange)) {
-            console.error(`[WARNING] unmatching peer dependency`);
+          console.error(`[WARNING] unmatching peer dependency`);
         }
         // Install this peerDependency
-        watchDog = peerDeps.length + 1; 
         return result;
       } else {
         if (optional) {
-          watchDog = peerDeps.length + 1; 
           return "ignored";
         } else {
           if (graph.hasPeerLink(parent)) {
-            watchDog--;
             return "retryLater";
           } else {
             if (failOnMissingPeerDependencies) {
               throw new Error(`Unmet peer dependency: ${name} in ${parent}`);
             } else {
               console.error(`Unmet peer dependency: ${name} in ${parent}`);
-              watchDog = peerDeps.length + 1; 
               return "failed";
             }
           }
         }
       }
     }
-    const result =
-        resolveChild(parentId, targetName, optional);
+    const result = resolveChild(parentId, targetName, optional);
     if (typeof result === "number") {
       const existingVirtualNode = graph.getVirtualNode(
         sourceId,
@@ -210,13 +204,27 @@ export function createDependencyGraph(
         result
       );
       if (existingVirtualNode !== undefined) {
+        const newPeerLinks = graph.peerLinks.get(existingVirtualNode) || [];
+
+        for (const newPeerLink of newPeerLinks) {
+          peerDeps.push({
+            parentId,
+            sourceId: existingVirtualNode,
+            targetName: newPeerLink.targetName,
+            targetRange: newPeerLink.targetRange,
+            optional: newPeerLink.optional,
+          });
+        }
         graph.changeChildren(parentId, sourceId, existingVirtualNode);
+
+        watchDog = peerDeps.length + 1;
       } else {
         const newPackageId = graph.createVirtualNode(
           sourceId,
           targetName,
           result
         );
+
         const newPeerLinks = graph.peerLinks.get(newPackageId) || [];
         for (const newPeerLink of newPeerLinks) {
           peerDeps.push({
@@ -227,8 +235,10 @@ export function createDependencyGraph(
             optional: newPeerLink.optional,
           });
         }
-        const children = Array.from(graph.links.get(newPackageId)?.keys() || []);
-        for(const child of children) {
+        const children = Array.from(
+          graph.links.get(newPackageId)?.keys() || []
+        );
+        for (const child of children) {
           const childPeerLinks = graph.peerLinks.get(child) || [];
           for (const childPeerLink of childPeerLinks) {
             peerDeps.push({
@@ -236,14 +246,16 @@ export function createDependencyGraph(
               sourceId: child,
               targetName: childPeerLink.targetName,
               targetRange: childPeerLink.targetRange,
-              optional: childPeerLink.optional
-            })
+              optional: childPeerLink.optional,
+            });
           }
         }
         graph.changeChildren(parentId, sourceId, newPackageId);
+        watchDog = peerDeps.length + 1;
       }
     } else if (result === "retryLater") {
-      peerDeps.push(peerDep)
+      peerDeps.push(peerDep);
+      watchDog--;
     }
   }
 
