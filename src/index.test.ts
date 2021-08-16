@@ -1549,7 +1549,7 @@ it("does not fail when peer dependencies are unmet, when explicitly asked not to
   createDependencyGraph(packageManifests, resolutionMap, false);
 });
 
-it("emit warning if peerDependency is fulfilled with wrong version", () => {
+it("don't emit warning if peerDependency is fulfilled with wrong version", () => {
   let spy: any = {};
 
   spy.console = jest.spyOn(console, "error").mockImplementation(() => {});
@@ -1586,6 +1586,46 @@ it("emit warning if peerDependency is fulfilled with wrong version", () => {
     C: { "^1.0.0": "1.0.1" },
   };
   createDependencyGraph(packageManifests, resolutionMap);
+  expect(console.error).toHaveBeenCalledTimes(0);
+});
+
+it("emit warning if peerDependency is fulfilled with wrong version if option is opted-in", () => {
+  let spy: any = {};
+
+  spy.console = jest.spyOn(console, "error").mockImplementation(() => {});
+  afterEach(() => spy.console.mockClear());
+  afterAll(() => spy.console.mockRestore());
+
+  const packageManifests = [
+    {
+      name: "A",
+      version: "1.0.0",
+      isLocal: true,
+      dependencies: {
+        B: "^1.0.0",
+        C: "^1.0.0",
+      },
+    },
+    {
+      name: "B",
+      version: "1.1.0",
+      isLocal: false,
+      peerDependencies: {
+        C: "^2.0.0",
+      },
+    },
+    {
+      name: "C",
+      version: "1.0.1",
+      isLocal: false,
+    },
+  ];
+
+  const resolutionMap = {
+    B: { "^1.0.0": "1.1.0" },
+    C: { "^1.0.0": "1.0.1" },
+  };
+  createDependencyGraph(packageManifests, resolutionMap, true, true);
   expect(console.error).toHaveBeenCalledTimes(1);
   expect(spy.console.mock.calls[0][0]).toContain(
     "[WARNING] unmatching peer dependency"

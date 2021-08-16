@@ -37,10 +37,15 @@ type DependencyGraph = {
 export function createDependencyGraph(
   manifests: PackageManifest[],
   resolutionMap: ResolutionMap,
-  failOnMissingPeerDependencies?: boolean
+  failOnMissingPeerDependencies?: boolean,
+  warnOnMissmatchedPeerDependencies?: boolean
 ): DependencyGraph {
   if (failOnMissingPeerDependencies === undefined) {
     failOnMissingPeerDependencies = true;
+  }
+
+  if (warnOnMissmatchedPeerDependencies === undefined) {
+    warnOnMissmatchedPeerDependencies = false;
   }
 
   const graph = new Graph();
@@ -179,7 +184,11 @@ export function createDependencyGraph(
           const parentVersion = graph.reversedNodes.get(parentId)!.version;
           const sourceName = graph.reversedNodes.get(sourceId)!.name;
           const sourceVersion = graph.reversedNodes.get(sourceId)!.version;
-          console.error(`[WARNING] unmatching peer dependency, ${name} in ${sourceName}@${sourceVersion} (parent: ${parentName}@${parentVersion}) was resolved to version ${version} which does not satisfy the given range: ${targetRange}`);
+          if (warnOnMissmatchedPeerDependencies) {
+            console.error(
+              `[WARNING] unmatching peer dependency, ${name} in ${sourceName}@${sourceVersion} (parent: ${parentName}@${parentVersion}) was resolved to version ${version} which does not satisfy the given range: ${targetRange}`
+            );
+          }
         }
         // Install this peerDependency
         return result;
@@ -195,9 +204,13 @@ export function createDependencyGraph(
             const sourceName = graph.reversedNodes.get(sourceId)!.name;
             const sourceVersion = graph.reversedNodes.get(sourceId)!.version;
             if (failOnMissingPeerDependencies) {
-              throw new Error(`[ERROR] Unmet peer dependency: ${name} in ${sourceName}@${sourceVersion} (parent: ${parentName}@${parentVersion})`);
+              throw new Error(
+                `[ERROR] Unmet peer dependency: ${name} in ${sourceName}@${sourceVersion} (parent: ${parentName}@${parentVersion})`
+              );
             } else {
-              console.error(`[WARNING] Unmet peer dependency: ${name} in ${sourceName}@${sourceVersion} (parent: ${parentName}@${parentVersion})`);
+              console.error(
+                `[WARNING] Unmet peer dependency: ${name} in ${sourceName}@${sourceVersion} (parent: ${parentName}@${parentVersion})`
+              );
               return "failed";
             }
           }
